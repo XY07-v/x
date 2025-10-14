@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YESBPO - Acceso Restringido</title>
+    <style>
+        /* ESTILOS GENERALES Y LOGIN (SE MANTIENEN) */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+            margin: 0;
+            background-color: #f4f4f4; 
+            font-family: Arial, sans-serif;
+            box-sizing: border-box;
+            overflow: hidden; 
+        }
+
+        #login-container {
+            max-width: 400px; 
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        #title {
+            font-size: 2em;
+            margin-bottom: 20px;
+            color: #333;
+            font-weight: bold;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group input, button[type="submit"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        button[type="submit"] {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 1em;
+            margin-top: 10px;
+        }
+
+        button[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+
+        #error-message {
+            color: red;
+            margin-top: 10px;
+        }
+
+        /* ESTILOS DEL PANEL SECRETO Y BOTONES */
+        #secret-panel {
+            display: none; 
+            position: relative; 
+            width: 100vw;
+            height: 100vh;
+            background-color: #ffffff;
+            box-sizing: border-box;
+        }
+
+        #appsheet-container {
+            width: 100%;
+            height: 100%; 
+        }
+
+        #appsheet-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none; 
+        }
+
+        /* 1. Botón de CERRAR SESIÓN (Más oscuro y SÓLIDO) */
+        #logout-button {
+            position: absolute; 
+            top: 10px;
+            right: 10px;
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            /* Color más oscuro y sólido (sin transparencia) */
+            background-color: #6a0000; /* Rojo Borgoña Oscuro */
+            color: white;
+            border: none;
+            border-radius: 50%; 
+            cursor: pointer;
+            font-size: 1.2em;
+            line-height: 40px; 
+            text-align: center;
+            z-index: 10; 
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            transition: background-color 0.2s;
+        }
+
+        #logout-button:hover {
+            background-color: #a00000; /* Un poco más claro al pasar el ratón */
+        }
+
+        /* 2. Estilo para el mensaje de bienvenida (CENTRADO) */
+        #welcome-message {
+            position: absolute;
+            /* Centrar horizontalmente: */
+            left: 50%; 
+            transform: translateX(-50%); 
+            top: 15px; 
+            
+            margin: 0;
+            padding: 5px 15px;
+            font-size: 1.2em;
+            color: #333; /* Texto más oscuro para mejor contraste */
+            background-color: #ffffff; /* Fondo blanco sólido */
+            border-radius: 6px;
+            z-index: 10;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Sombra ligera */
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="login-container">
+        <div id="title">YESBPO</div>
+        <form id="login-form">
+            <div class="input-group">
+                <input type="text" id="username" name="username" placeholder="Usuario" required>
+            </div>
+            <div class="input-group">
+                <input type="password" id="password" name="password" placeholder="Contraseña" required>
+            </div>
+            <button type="submit">Acceder</button>
+            <p id="error-message" style="display: none;">Usuario o contraseña incorrectos.</p>
+        </form>
+    </div>
+
+    <div id="secret-panel">
+        
+        <button id="logout-button" onclick="logout()">❌</button>
+
+        <p id="welcome-message"></p>
+        
+        <div id="appsheet-container">
+            <iframe 
+                title="AppSheet YESBPO" 
+                width="100%" 
+                height="100%" 
+                src="https://www.appsheet.com/start/4c92aaa3-884f-4978-8661-03c5fae1bb6f" 
+                frameborder="0" 
+                allowFullScreen="true">
+            </iframe>
+        </div>
+    </div>
+
+
+<script>
+    // DICCIONARIO DE USUARIOS (Se mantiene)
+    const USERS = {
+        "Aleviano": { password: "Y3$BP02025", name: "Alejandra" },
+        "Jbastidas": { password: "Y3$BP02025", name: "Johana" },
+        "Avanegas": { password: "Y3$BP02025", name: "Andres Vanegas" }
+    };
+
+    const loginForm = document.getElementById('login-form');
+    const loginContainer = document.getElementById('login-container');
+    const secretPanel = document.getElementById('secret-panel');
+    const errorMessage = document.getElementById('error-message');
+    const welcomeMessageElement = document.getElementById('welcome-message');
+
+    loginForm.addEventListener('submit', function(event) {
+        event.preventDefault(); 
+
+        const usernameInput = document.getElementById('username').value;
+        const passwordInput = document.getElementById('password').value;
+        const userData = USERS[usernameInput];
+
+        if (userData && userData.password === passwordInput) {
+            
+            // Credenciales correctas:
+            
+            // Mensaje de bienvenida discreto
+            welcomeMessageElement.textContent = `Bienvenido, ${userData.name}`;
+
+            // Ocultar login y mostrar panel de ancho completo
+            loginContainer.style.display = 'none';
+            secretPanel.style.display = 'block'; 
+            
+            // Ajustar el body
+            document.body.style.justifyContent = 'flex-start';
+            document.body.style.alignItems = 'flex-start';
+            document.body.style.overflow = 'hidden'; 
+            
+        } else {
+            errorMessage.style.display = 'block';
+        }
+    });
+
+    function logout() {
+        // Oculta el panel y muestra el login
+        secretPanel.style.display = 'none';
+        loginContainer.style.display = 'block';
+        errorMessage.style.display = 'none'; 
+        document.getElementById('username').value = ''; 
+        document.getElementById('password').value = ''; 
+        
+        // Restaura los estilos de centrado
+        document.body.style.justifyContent = 'center';
+        document.body.style.alignItems = 'center';
+    }
+
+</script>
+</body>
+</html>
