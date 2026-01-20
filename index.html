@@ -3,225 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YESBPO - Acceso Restringido</title>
+    <title>CMR Y4</title>
     <style>
-        /* ESTILOS GENERALES Y LOGIN (SE MANTIENEN) */
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            width: 100vw;
-            margin: 0;
-            background-color: #f4f4f4; 
-            font-family: Arial, sans-serif;
-            box-sizing: border-box;
-            overflow: hidden; 
+        body, html { 
+            margin: 0; padding: 0; height: 100%; width: 100%; 
+            overflow: hidden; font-family: sans-serif; 
+            background: #050505; user-select: none; 
         }
-
-        #login-container {
-            max-width: 400px; 
-            padding: 20px;
-            background-color: #fff;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-            text-align: center;
+        #l-s {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #050505; display: flex; justify-content: center; align-items: center;
+            z-index: 1000;
         }
-
-        #title {
-            font-size: 2em;
-            margin-bottom: 20px;
-            color: #333;
-            font-weight: bold;
+        .b-x { 
+            background: #111; padding: 40px; border-radius: 2px; 
+            text-align: center; border-top: 2px solid #FF00FF;
+            width: 260px;
         }
-
-        .input-group {
-            margin-bottom: 15px;
+        h2 { color: white; font-size: 18px; margin-bottom: 25px; letter-spacing: 3px; }
+        input { 
+            display: block; width: 100%; margin: 10px 0; padding: 12px; 
+            border: 1px solid #222; background: #000; 
+            color: #FF00FF; box-sizing: border-box; outline: none; font-size: 14px;
         }
-
-        .input-group input, button[type="submit"] {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
+        button { 
+            background: #FF00FF; color: white; border: none; width: 100%;
+            padding: 12px; cursor: pointer; font-weight: bold; margin-top: 15px;
         }
-        
-        button[type="submit"] {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            cursor: pointer;
-            font-size: 1em;
-            margin-top: 10px;
-        }
-
-        button[type="submit"]:hover {
-            background-color: #0056b3;
-        }
-
-        #error-message {
-            color: red;
-            margin-top: 10px;
-        }
-
-        /* ESTILOS DEL PANEL SECRETO Y BOTONES */
-        #secret-panel {
-            display: none; 
-            position: relative; 
-            width: 100vw;
-            height: 100vh;
-            background-color: #ffffff;
-            box-sizing: border-box;
-        }
-
-        #appsheet-container {
-            width: 100%;
-            height: 100%; 
-        }
-
-        #appsheet-container iframe {
-            width: 100%;
-            height: 100%;
-            border: none; 
-        }
-
-        /* 1. Botón de CERRAR SESIÓN (Más oscuro y SÓLIDO) */
-        #logout-button {
-            position: absolute; 
-            top: 10px;
-            right: 10px;
-            width: 40px;
-            height: 40px;
-            padding: 0;
-            /* Color más oscuro y sólido (sin transparencia) */
-            background-color: #6a0000; /* Rojo Borgoña Oscuro */
-            color: white;
-            border: none;
-            border-radius: 50%; 
-            cursor: pointer;
-            font-size: 1.2em;
-            line-height: 40px; 
-            text-align: center;
-            z-index: 10; 
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-            transition: background-color 0.2s;
-        }
-
-        #logout-button:hover {
-            background-color: #a00000; /* Un poco más claro al pasar el ratón */
-        }
-
-        /* 2. Estilo para el mensaje de bienvenida (CENTRADO) */
-        #welcome-message {
-            position: absolute;
-            /* Centrar horizontalmente: */
-            left: 50%; 
-            transform: translateX(-50%); 
-            top: 15px; 
-            
-            margin: 0;
-            padding: 5px 15px;
-            font-size: 1.2em;
-            color: #333; /* Texto más oscuro para mejor contraste */
-            background-color: #ffffff; /* Fondo blanco sólido */
-            border-radius: 6px;
-            z-index: 10;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Sombra ligera */
-        }
-
+        #a-c { display: none; flex-direction: column; height: 100vh; width: 100vw; }
+        header { background: #FF00FF; color: white; padding: 3px 10px; }
+        header h1 { margin: 0; font-size: 11px; font-weight: bold; }
+        iframe { border: none; width: 100%; height: 100%; flex-grow: 1; }
+        #e { color: #FF00FF; font-size: 10px; margin-top: 10px; height: 12px; letter-spacing: 1px; }
     </style>
 </head>
-<body>
+<body oncontextmenu="return false;">
 
-    <div id="login-container">
-        <div id="title">YESBPO</div>
-        <form id="login-form">
-            <div class="input-group">
-                <input type="text" id="username" name="username" placeholder="Usuario" required>
-            </div>
-            <div class="input-group">
-                <input type="password" id="password" name="password" placeholder="Contraseña" required>
-            </div>
-            <button type="submit">Acceder</button>
-            <p id="error-message" style="display: none;">Usuario o contraseña incorrectos.</p>
-        </form>
-    </div>
-
-    <div id="secret-panel">
-        
-        <button id="logout-button" onclick="logout()">❌</button>
-
-        <p id="welcome-message"></p>
-        
-        <div id="appsheet-container">
-            <iframe 
-                title="AppSheet YESBPO" 
-                width="100%" 
-                height="100%" 
-                src="https://www.appsheet.com/start/4c92aaa3-884f-4978-8661-03c5fae1bb6f" 
-                frameborder="0" 
-                allowFullScreen="true">
-            </iframe>
+    <div id="l-s">
+        <div class="b-x">
+            <h2>CMR Y4</h2>
+            <input type="text" id="u" placeholder="USUARIO" autocomplete="off">
+            <input type="password" id="p" placeholder="PASSWORD" autocomplete="off">
+            <div id="e"></div>
+            <button onclick="v()">LOGIN</button>
         </div>
     </div>
 
+    <div id="a-c">
+        <header><h1>CMR Y4</h1></header>
+        <iframe id="f" src="https://www.appsheet.com/start/968d9884-9e36-4534-be97-0e5fd3a0288f"></iframe>
+    </div>
 
-<script>
-    // DICCIONARIO DE USUARIOS (Se mantiene)
-    const USERS = {
-        "Aleviano": { password: "Y3$BP02025", name: "Alejandra" },
-        "Jbastidas": { password: "Y3$BP02025", name: "Johana" },
-        "Avanegas": { password: "Y3$BP02025", name: "Andres Vanegas" }
-    };
+    <script>
+        // Usuario: Y42025 | Pass: Apiai2025*
+        const _0x1 = "WTQyMDI1"; 
+        const _0x2 = "QXBpYWkyMDI1Kg==";
 
-    const loginForm = document.getElementById('login-form');
-    const loginContainer = document.getElementById('login-container');
-    const secretPanel = document.getElementById('secret-panel');
-    const errorMessage = document.getElementById('error-message');
-    const welcomeMessageElement = document.getElementById('welcome-message');
-
-    loginForm.addEventListener('submit', function(event) {
-        event.preventDefault(); 
-
-        const usernameInput = document.getElementById('username').value;
-        const passwordInput = document.getElementById('password').value;
-        const userData = USERS[usernameInput];
-
-        if (userData && userData.password === passwordInput) {
+        function v() {
+            const i1 = document.getElementById("u").value;
+            const i2 = document.getElementById("p").value;
             
-            // Credenciales correctas:
-            
-            // Mensaje de bienvenida discreto
-            welcomeMessageElement.textContent = `Bienvenido, ${userData.name}`;
-
-            // Ocultar login y mostrar panel de ancho completo
-            loginContainer.style.display = 'none';
-            secretPanel.style.display = 'block'; 
-            
-            // Ajustar el body
-            document.body.style.justifyContent = 'flex-start';
-            document.body.style.alignItems = 'flex-start';
-            document.body.style.overflow = 'hidden'; 
-            
-        } else {
-            errorMessage.style.display = 'block';
+            if (btoa(i1) === _0x1 && btoa(i2) === _0x2) {
+                document.getElementById("l-s").style.display = "none";
+                document.getElementById("a-c").style.display = "flex";
+                // Forzar recarga del iframe para asegurar que cargue tras el login
+                document.getElementById("f").src = document.getElementById("f").src;
+            } else {
+                document.getElementById("e").innerText = "DATOS INCORRECTOS";
+                setTimeout(() => { document.getElementById("e").innerText = ""; }, 2000);
+            }
         }
-    });
 
-    function logout() {
-        // Oculta el panel y muestra el login
-        secretPanel.style.display = 'none';
-        loginContainer.style.display = 'block';
-        errorMessage.style.display = 'none'; 
-        document.getElementById('username').value = ''; 
-        document.getElementById('password').value = ''; 
-        
-        // Restaura los estilos de centrado
-        document.body.style.justifyContent = 'center';
-        document.body.style.alignItems = 'center';
-    }
-
-</script>
+        // Bloqueos de seguridad
+        document.addEventListener('contextmenu', e => e.preventDefault(), true);
+        window.addEventListener('keydown', e => {
+            if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 67 || e.keyCode == 74)) || (e.ctrlKey && e.keyCode == 85)) {
+                e.preventDefault();
+            }
+        }, true);
+        document.addEventListener('keypress', e => { if (e.key === 'Enter') v(); });
+    </script>
 </body>
 </html>
