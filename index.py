@@ -21,15 +21,15 @@ def generar_reporte():
         hoy = datetime.now()
         df = df[df['Fecha_DT'] <= hoy].copy()
         
-        # 3. Aplicar tus reglas: -1 es ✔️ | Vacío es ❌
+        # 3. Aplicar reglas: -1 es ✔️ | Vacío es ❌
         df = df.fillna('❌')
         df = df.replace(['-1', '-1.0', -1], '✔️')
         
-        # Ordenar y limpiar columna auxiliar
+        # Limpieza
         df = df.sort_values(by='Fecha_DT', ascending=False)
         df = df.drop(columns=['Fecha_DT'])
 
-        # 4. Diseño HTML con Buscador
+        # 4. Diseño HTML (Lo que se verá en la web)
         html_content = f"""
         <!DOCTYPE html>
         <html lang="es">
@@ -42,7 +42,7 @@ def generar_reporte():
                 .filtros {{ display: flex; gap: 10px; margin-bottom: 20px; background: #eee; padding: 15px; border-radius: 8px; }}
                 input {{ padding: 10px; border: 1px solid #ccc; border-radius: 5px; flex: 1; }}
                 button {{ padding: 10px 20px; background: #002d5a; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }}
-                table {{ width: 100%; border-collapse: collapse; display: none; margin-top: 15px; }}
+                table {{ width: 100%; border-collapse: collapse; margin-top: 15px; }}
                 th {{ background: #002d5a; color: white; padding: 12px; font-size: 13px; }}
                 td {{ padding: 10px; border-bottom: 1px solid #eee; font-size: 12px; }}
                 .v {{ color: green; font-weight: bold; }}
@@ -65,7 +65,6 @@ def generar_reporte():
                     const tabla = document.getElementById("miTabla");
                     const nom = document.getElementById("buscNombre").value.toUpperCase();
                     const filas = tabla.getElementsByTagName("tr");
-                    tabla.style.display = "table"; 
                     for (let i = 1; i < filas.length; i++) {{
                         const tdNom = filas[i].cells[4] ? filas[i].cells[4].innerText.toUpperCase() : "";
                         filas[i].style.display = tdNom.includes(nom) ? "" : "none";
@@ -79,7 +78,7 @@ def generar_reporte():
         # Colorear iconos
         html_content = html_content.replace('✔️', '<span class="v">✔️</span>').replace('❌', '<span class="x">❌</span>')
 
-        # CREACIÓN DEL ARCHIVO FISICO
+        # ESTA LÍNEA ES LA QUE CREA EL ARCHIVO FISICAMENTE
         with open("index.html", "w", encoding="utf-8") as f:
             f.write(html_content)
             
