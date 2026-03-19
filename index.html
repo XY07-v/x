@@ -2,63 +2,78 @@ import pandas as pd
 import requests
 import io
 
-# URL de descarga directa
 url = "https://manpowergroupcolombia-my.sharepoint.com/:x:/g/personal/edwar_vanegas_manpowercolombia_com/IQCFQVQEx44GSZgIu9VIZ2dGAS0h1sEo0V-hJ812-oW8tys?e=o0J3Aa&download=1"
 
-def crear_dashboard_html(url_link):
+def generar_tabla_html(url_link):
     try:
-        # 1. Descarga y Procesamiento
+        # 1. Lectura de la data (Tu lógica)
         headers = {'User-Agent': 'Mozilla/5.0'}
         response = requests.get(url_link, headers=headers, timeout=20)
         response.raise_for_status()
         
-        # Leer CSV (delimitado por ;)
         df = pd.read_csv(io.BytesIO(response.content), sep=';', dtype={'MES': str}, encoding='latin1')
 
-        # Aplicar reglas: Vacíos -> X, -1 -> ✓
+        # 2. Aplicación de tus reglas
         df = df.fillna('X')
         df = df.astype(str).replace(['-1', '-1.0'], '✓')
 
-        # 2. Generar Estructura HTML con Estilo Bootstrap
-        html_content = f"""
+        # 3. Generar HTML con CSS y DataTables para GitHub
+        # Usamos clases de Bootstrap y estilos personalizados para los iconos
+        html_tabla = df.to_html(classes='table table-striped display', id='tabla_data', index=False, border=0)
+
+        html_final = f"""
         <!DOCTYPE html>
         <html lang="es">
         <head>
             <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Reporte de Datos - Manpower</title>
+            <title>Reporte Manpower - Dashboard</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
             <style>
-                body {{ background-color: #f8f9fa; padding: 20px; }}
-                .table-container {{ background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
-                th {{ background-color: #004581 !important; color: white; }}
-                tr:nth-child(even) {{ background-color: #f2f2f2; }}
-                .chulo {{ color: green; font-weight: bold; }}
-                .equis {{ color: red; font-weight: bold; }}
+                body {{ background-color: #f4f7f6; padding: 30px; font-family: sans-serif; }}
+                .container-card {{ background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }}
+                h2 {{ color: #004581; font-weight: bold; border-bottom: 3px solid #004581; padding-bottom: 10px; }}
+                /* Estilos para tus reglas */
+                td:contains("✓") {{ color: #28a745; font-weight: bold; text-align: center; font-size: 1.2rem; }}
+                td:contains("X") {{ color: #dc3545; font-weight: bold; text-align: center; font-size: 1.2rem; }}
+                .dataTables_wrapper .dataTables_paginate .paginate_button {{ padding: 0.2em 0.5em; }}
             </style>
         </head>
         <body>
             <div class="container-fluid">
-                <div class="table-container">
-                    <h2 class="mb-4 text-center">Visualización de Datos Manpower</h2>
-                    <p class="text-muted">Nota: Se cuentan días de Lunes a Sábado. Los '-1' indican positivo (✓) y los vacíos indican déficit (X).</p>
+                <div class="container-card">
+                    <h2 class="mb-4">Visualización de Datos Manpower</h2>
+                    <p class="text-secondary">Días contados de Lunes a Sábado. (✓ = Positivo | X = Déficit)</p>
+                    
                     <div class="table-responsive">
-                        {df.to_html(classes='table table-hover table-bordered', index=False, escape=False).replace('✓', '<span class="chulo">✓</span>').replace('X', '<span class="equis">X</span>')}
+                        {html_tabla}
                     </div>
                 </div>
             </div>
+
+            <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+            <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+            <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+            
+            <script>
+                $(document).ready(function() {{
+                    $('#tabla_data').DataTable({{
+                        "language": {{ "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json" }},
+                        "pageLength": 25,
+                        "order": []
+                    }});
+                }});
+            </script>
         </body>
         </html>
         """
 
-        # 3. Guardar el archivo
         with open("index.html", "w", encoding="utf-8") as f:
-            f.write(html_content)
+            f.write(html_final)
         
-        print("¡Listo! Se ha generado 'index.html'. Ábrelo en tu navegador para verlo.")
+        print("Éxito: Archivo 'index.html' generado para GitHub.")
 
     except Exception as e:
-        print(f"Error al generar el HTML: {e}")
+        print(f"Error: {e}")
 
-# Ejecutar
-crear_dashboard_html(url)
+generar_tabla_html(url)
