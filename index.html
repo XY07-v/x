@@ -1,37 +1,43 @@
 import pandas as pd
 import requests
 import io
+from IPython.display import display
 
-url = "https://manpowergroupcolombia-my.sharepoint.com/:x:/g/personal/edwar_vanegas_manpowercolombia_com/IQCFQVQEx44GSZgIu9VIZ2dGAS0h1sEo0V-hJ812-oW8tys?e=o0J3Aa&download=1"
+# URL del recurso (Asegúrate de que el enlace de descarga sea directo)
+URL = "https://manpowergroupcolombia-my.sharepoint.com/:x:/g/personal/edwar_vanegas_manpowercolombia_com/IQCFQVQEx44GSZgIu9VIZ2dGAS0h1sEo0V-hJ812-oW8tys?e=o0J3Aa&download=1"
 
-def procesar_csv_seguro(url_link):
+def obtener_datos_procesados(url_link):
+    """
+    Descarga el CSV y aplica las reglas:
+    - Vacíos -> 'X' (Déficit)
+    - Valor -1 -> '✓' (Positivo)
+    """
     try:
         headers = {'User-Agent': 'Mozilla/5.0'}
         response = requests.get(url_link, headers=headers, timeout=20)
         response.raise_for_status()
         
-        # Leemos el CSV delimitado por ;
+        # Lectura con MES como texto y codificación compatible
         df = pd.read_csv(io.BytesIO(response.content), sep=';', dtype={'MES': str}, encoding='latin1')
 
-        # --- APLICACIÓN DE TUS REGLAS ---
-        df = df.fillna('X') # Vacíos = Déficit
-        df = df.astype(str).replace(['-1', '-1.0'], '✓') # -1 = Positivo
-
-        # --- VISUALIZACIÓN CONTROLADA (Para evitar el error de IOPub) ---
-        print(f"### Procesamiento Exitoso ###")
-        print(f"Total de registros: {len(df)}")
-        print(f"Total de columnas: {len(df.columns)}")
+        # --- APLICACIÓN DE REGLAS DE NEGOCIO ---
+        # 1. El vacío es el déficit -> 'X'
+        df = df.fillna('X') 
         
-        print("\n--- Primeros 10 registros ---")
-        print(df.head(10).to_string(index=False))
-        
-        print("\n--- Últimos 10 registros ---")
-        print(df.tail(10).to_string(index=False))
+        # 2. El -1 es positivo -> '✓'
+        df = df.astype(str).replace(['-1', '-1.0'], '✓')
 
         return df
 
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error al conectar o procesar: {e}")
+        return None
 
-# Ejecutar
-df_resultado = procesar_csv_seguro(url)
+# --- EJECUCIÓN ---
+if __name__ == "__main__":
+    df_final = obtener_datos_procesados(URL)
+    
+    if df_final is not None:
+        # Esto mostrará la data en formato tabla interactiva en GitHub Codespaces, Colab o Jupyter
+        print("Visualizando Tabla de Datos (Lunes a Sábado):")
+        display(df_final)
