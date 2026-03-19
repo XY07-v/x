@@ -1,2 +1,3 @@
 pandas
-pyodide-http
+requests
+openpyxl
