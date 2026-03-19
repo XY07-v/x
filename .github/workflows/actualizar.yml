@@ -1,7 +1,7 @@
 name: Actualizar Automatizado
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:      # Botón manual
   schedule:
     - cron: '0 13 * * 1-6' # 8 AM COL Lunes a Sábado
 
@@ -9,15 +9,24 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write     # Permiso para sobrescribir el index.html
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4 # Actualizado para evitar advertencias
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5 # Actualizado para evitar advertencias
         with:
-          python-version: '3.9'
-      - run: pip install pandas requests openpyxl
-      - run: python index.py # Corre el script que sobreescribe el HTML
-      - run: |
+          python-version: '3.11'
+
+      - name: Instalar librerías
+        run: pip install pandas requests openpyxl
+
+      - name: Ejecutar script de procesamiento
+        run: python index.py
+
+      - name: Guardar y subir cambios
+        run: |
           git config --global user.name 'GitHub Action'
           git config --global user.email 'action@github.com'
           git add index.html
