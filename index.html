@@ -1,43 +1,50 @@
-import pandas as pd
-import requests
-import io
-from IPython.display import display
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador de Datos - Manpower</title>
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background-color: #f4f4f9; }
+        #tabla-contenedor { overflow-x: auto; margin-top: 20px; }
+        table { border-collapse: collapse; width: 100%; background: white; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background-color: #0046ad; color: white; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h2>Reporte de Datos (Lunes a Sábado)</h2>
+    <div id="loading">Cargando datos y procesando tabla...</div>
+    <div id="tabla-contenedor"></div>
 
-# URL del recurso (Asegúrate de que el enlace de descarga sea directo)
-URL = "https://manpowergroupcolombia-my.sharepoint.com/:x:/g/personal/edwar_vanegas_manpowercolombia_com/IQCFQVQEx44GSZgIu9VIZ2dGAS0h1sEo0V-hJ812-oW8tys?e=o0J3Aa&download=1"
-
-def obtener_datos_procesados(url_link):
-    """
-    Descarga el CSV y aplica las reglas:
-    - Vacíos -> 'X' (Déficit)
-    - Valor -1 -> '✓' (Positivo)
-    """
-    try:
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        response = requests.get(url_link, headers=headers, timeout=20)
-        response.raise_for_status()
+    <script type="py">
+        import pandas as pd
+        import pyodide_http
+        from pyscript import display
         
-        # Lectura con MES como texto y codificación compatible
-        df = pd.read_csv(io.BytesIO(response.content), sep=';', dtype={'MES': str}, encoding='latin1')
+        # Permitir peticiones HTTP en el navegador
+        pyodide_http.patch_all()
 
-        # --- APLICACIÓN DE REGLAS DE NEGOCIO ---
-        # 1. El vacío es el déficit -> 'X'
-        df = df.fillna('X') 
-        
-        # 2. El -1 es positivo -> '✓'
-        df = df.astype(str).replace(['-1', '-1.0'], '✓')
+        url = "https://manpowergroupcolombia-my.sharepoint.com/:x:/g/personal/edwar_vanegas_manpowercolombia_com/IQCFQVQEx44GSZgIu9VIZ2dGAS0h1sEo0V-hJ812-oW8tys?e=o0J3Aa&download=1"
 
-        return df
+        try:
+            # Leer CSV
+            df = pd.read_csv(url, sep=';', dtype={'MES': str}, encoding='latin1')
 
-    except Exception as e:
-        print(f"Error al conectar o procesar: {e}")
-        return None
+            # --- TUS REGLAS ---
+            df = df.fillna('X') # Vacío es déficit
+            df = df.astype(str).replace(['-1', '-1.0'], '✓') # -1 es positivo
 
-# --- EJECUCIÓN ---
-if __name__ == "__main__":
-    df_final = obtener_datos_procesados(URL)
-    
-    if df_final is not None:
-        # Esto mostrará la data en formato tabla interactiva en GitHub Codespaces, Colab o Jupyter
-        print("Visualizando Tabla de Datos (Lunes a Sábado):")
-        display(df_final)
+            # Mostrar en el HTML
+            div_contenedor = document.getElementById("tabla-contenedor")
+            div_contenedor.innerHTML = df.to_html(index=False)
+            document.getElementById("loading").style.display = "none"
+            
+        except Exception as e:
+            document.getElementById("loading").innerHTML = f"Error: {e}"
+    </script>
+</body>
+</html>
