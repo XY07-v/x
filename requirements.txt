@@ -1,4 +1,3 @@
 pandas
 requests
-io
-os
+ipython
