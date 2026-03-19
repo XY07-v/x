@@ -3,16 +3,20 @@ name: Actualizar Reporte Manpower
 on:
   schedule:
     - cron: '0 13 * * 1-6' # 8 AM COL, Lunes a Sábado
-  workflow_dispatch:      # Botón manual
+  workflow_dispatch:      # Botón manual para pruebas
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions: # Esto ayuda a evitar el error 403
+    
+    # Permisos necesarios para subir el HTML generado
+    permissions:
       contents: write
-    steps:
-      - uses: actions/checkout@v3
       
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v3
+
       - name: Configurar Python
         uses: actions/setup-python@v4
         with:
@@ -22,14 +26,15 @@ jobs:
         run: |
           pip install pandas requests openpyxl
 
-      - name: Ejecutar script de procesamiento
-        run: python main.py
+      - name: Ejecutar script unificado
+        # Aquí es donde le decimos que use index.py en lugar de main.py
+        run: python index.py
 
       - name: Guardar y subir cambios
         run: |
           git config --global user.name 'GitHub Action'
           git config --global user.email 'action@github.com'
+          # Esto añade el index.html que genera tu script
           git add .
-          # El '|| exit 0' evita que el workflow falle si no hay datos nuevos
           git commit -m "Reporte actualizado automáticamente" || exit 0
           git push
