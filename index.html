@@ -3,108 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reporte de Cumplimiento Manpower</title>
+    <title>Visor de Datos Manpower - Excel Live</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        :root {
-            --manpower-blue: #0046ad;
-            --success: #27ae60;
-            --danger: #e74c3c;
-        }
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; color: #333; }
-        .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-        h1 { color: var(--manpower-blue); text-align: center; font-size: 24px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { background: var(--manpower-blue); color: white; padding: 12px; font-weight: 600; text-transform: uppercase; font-size: 13px; }
-        td { padding: 12px; border-bottom: 1px solid #edf2f7; text-align: center; }
-        .mes-cell { font-weight: bold; color: var(--manpower-blue); text-align: left; }
-        .chulo { color: var(--success); font-size: 1.4rem; font-weight: bold; }
-        .equis { color: var(--danger); font-size: 1.4rem; font-weight: bold; }
-        .loading { text-align: center; padding: 20px; color: #666; font-style: italic; }
-        .footer { margin-top: 20px; font-size: 12px; color: #888; text-align: right; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f9; padding: 20px; color: #333; }
+        .container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow-x: auto; }
+        h2 { color: #0046ad; border-bottom: 2px solid #0046ad; padding-bottom: 10px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem; }
+        th { background: #0046ad; color: white; padding: 12px; text-transform: uppercase; letter-spacing: 1px; }
+        td { padding: 10px; border-bottom: 1px solid #eee; text-align: center; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        
+        /* Reglas de visualización personalizadas */
+        .chulo { color: #27ae60; font-weight: bold; font-size: 1.2rem; }
+        .equis { color: #e74c3c; font-weight: bold; font-size: 1.2rem; }
+        .mes-texto { font-weight: bold; color: #0046ad; text-align: left; }
+        
+        #mensaje { padding: 20px; text-align: center; font-style: italic; color: #666; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Panel de Seguimiento y Cumplimiento</h1>
-    <div id="loader" class="loading">Cargando datos desde Excel...</div>
+    <h2>Vista en Tiempo Real: SharePoint Excel</h2>
+    <div id="mensaje">Conectando con el archivo de Edwar Vanegas...</div>
     
-    <table id="tabla-datos" style="display:none;">
-        <thead>
-            <tr>
-                <th>MES</th>
-                <th>FECHA / DÍA</th>
-                <th>ESTADO</th>
-            </tr>
-        </thead>
-        <tbody id="cuerpo-tabla"></tbody>
+    <table id="tabla-excel" style="display:none;">
+        <thead id="cabecera"></thead>
+        <tbody id="cuerpo"></tbody>
     </table>
-
-    <div class="footer">
-        * Lunes a Sábado. Domingos y festivos no incluidos.<br>
-        -1 = Positivo (✔️) | Vacío = Déficit (❌)
-    </div>
 </div>
 
 <script>
-    // URL de tu archivo (convertida para descarga directa de datos)
-    const urlExcel = "https://manpowergroupcolombia-my.sharepoint.com/:x:/g/personal/edwar_vanegas_manpowercolombia_com/IQCFQVQEx44GSZgIu9VIZ2dGARiJqn6nn9_psT0h1Cvxl_8?download=1";
+    // URL directa de tu archivo de SharePoint (con el parámetro de descarga forzada)
+    const excelURL = "https://manpowergroupcolombia-my.sharepoint.com/:x:/g/personal/edwar_vanegas_manpowercolombia_com/IQCFQVQEx44GSZgIu9VIZ2dGARiJqn6nn9_psT0h1Cvxl_8?download=1";
 
-    async function cargarExcel() {
+    async function leerArchivo() {
         try {
-            const response = await fetch(urlExcel);
-            const arrayBuffer = await response.arrayBuffer();
-            const data = new Uint8Array(arrayBuffer);
-            const workbook = XLSX.read(data, { type: 'array' });
-
-            // Leemos la primera hoja
-            const firstSheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheetName];
+            const res = await fetch(excelURL);
+            const buffer = await res.arrayBuffer();
+            const workbook = XLSX.read(new Uint8Array(buffer), { type: 'array' });
             
-            // Convertimos a JSON (defval asegura que los vacíos no se omitan)
-            const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+            // Tomamos la primera hoja del Excel
+            const nombreHoja = workbook.SheetNames[0];
+            const hoja = workbook.Sheets[nombreHoja];
+            
+            // Convertimos a JSON incluyendo celdas vacías (defval: "")
+            const rawData = XLSX.utils.sheet_to_json(hoja, { defval: "" });
 
-            renderizarTabla(jsonData);
+            if (rawData.length > 0) {
+                generarTabla(rawData);
+            } else {
+                document.getElementById('mensaje').innerText = "El archivo está vacío o no se pudo leer.";
+            }
         } catch (error) {
-            console.error("Error al cargar el archivo:", error);
-            document.getElementById('loader').innerText = "Error al conectar con el Excel. Asegúrate de que el enlace sea público.";
+            console.error(error);
+            document.getElementById('mensaje').innerHTML = "⚠️ Error al leer los datos. Asegúrate de que el enlace de SharePoint tenga permisos de lectura pública.";
         }
     }
 
-    function renderizarTabla(data) {
-        const tbody = document.getElementById('cuerpo-tabla');
-        const loader = document.getElementById('loader');
-        const tabla = document.getElementById('tabla-datos');
+    function generarTabla(data) {
+        const cabecera = document.getElementById('cabecera');
+        const cuerpo = document.getElementById('cuerpo');
+        const tabla = document.getElementById('tabla-excel');
+        const mensaje = document.getElementById('mensaje');
 
+        // 1. Crear encabezados dinámicos según el archivo
+        const columnas = Object.keys(data[0]);
+        let headerHtml = "<tr>";
+        columnas.forEach(col => {
+            headerHtml += `<th>${col}</th>`;
+        });
+        headerHtml += "</tr>";
+        cabecera.innerHTML = headerHtml;
+
+        // 2. Llenar filas con tus reglas aplicadas
         data.forEach(fila => {
-            const tr = document.createElement('tr');
-            
-            // Suponiendo columnas 'MES' y 'VALOR' (o similar según tu Excel)
-            // Adaptamos la lógica de negocio solicitada
-            const valorRaw = fila['VALOR'] || fila['Estado'] || ""; 
-            const mes = fila['MES'] || "N/A";
-            const dia = fila['FECHA'] || fila['DIA'] || "Sin fecha";
+            let rowHtml = "<tr>";
+            columnas.forEach(col => {
+                let valor = fila[col];
+                let contenido = valor;
+                let clase = "";
 
-            // REGLA: -1 es positivo (chulo), Vacío es déficit (X)
-            const esChulo = (valorRaw == -1 || valorRaw == "-1");
-            const icono = esChulo ? "✔️" : "❌";
-            const clase = esChulo ? "chulo" : "equis";
+                // APLICACIÓN DE TUS REGLAS:
+                // Si el valor es -1 -> Chulo
+                if (valor === -1 || valor === "-1") {
+                    contenido = "✔️";
+                    clase = "chulo";
+                } 
+                // Si el valor está vacío (Déficit) -> X
+                else if (valor === "" || valor === null || valor === undefined) {
+                    contenido = "❌";
+                    clase = "equis";
+                }
+                // Si la columna es MES, aplicar estilo de texto
+                else if (col.toUpperCase() === "MES") {
+                    clase = "mes-texto";
+                }
 
-            tr.innerHTML = `
-                <td class="mes-cell">${mes}</td>
-                <td>${dia}</td>
-                <td class="${clase}">${icono}</td>
-            `;
-            tbody.appendChild(tr);
+                rowHtml += `<td class="${clase}">${contenido}</td>`;
+            });
+            rowHtml += "</tr>";
+            cuerpo.innerHTML += rowHtml;
         });
 
-        loader.style.display = 'none';
+        mensaje.style.display = 'none';
         tabla.style.display = 'table';
     }
 
-    // Iniciar carga
-    cargarExcel();
+    leerArchivo();
 </script>
 
 </body>
