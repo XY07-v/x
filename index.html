@@ -1,70 +1,79 @@
 import pandas as pd
 import requests
 import io
+import os
+from datetime import datetime
 
 URL_DATA = "https://manpowergroupcolombia-my.sharepoint.com/:x:/g/personal/edwar_vanegas_manpowercolombia_com/IQCFQVQEx44GSZgIu9VIZ2dGAS0h1sEo0V-hJ812-oW8tys?e=o0J3Aa&download=1"
 
-def generar_reporte_html():
+def procesar_y_crear_html(url_link):
     try:
-        print("--- Iniciando proceso de reporte ---")
+        print("--- Descargando datos desde SharePoint ---")
         headers = {'User-Agent': 'Mozilla/5.0'}
-        response = requests.get(URL_DATA, headers=headers, timeout=20)
+        response = requests.get(url_link, headers=headers, timeout=20)
         response.raise_for_status()
         
-        # 1. Leer datos (MES como texto)
+        # 1. Lectura inicial (MES como texto)
         df = pd.read_csv(io.BytesIO(response.content), sep=';', dtype={'MES': str}, encoding='latin1')
 
-        # 2. Aplicar tus reglas de negocio
+        # 2. Aplicación de Reglas Personalizadas
         df = df.astype(str)
-        df = df.replace(['nan', 'None', '', 'nan.1'], 'X') # Vacío = Déficit
-        df = df.replace(['-1', '-1.0'], '✓')             # -1 = Positivo
+        df = df.replace(['nan', 'None', '', 'nan.1'], 'X') # Vacío = X
+        df = df.replace(['-1', '-1.0'], '✓')             # -1 = ✓
 
-        # 3. Crear estilo CSS para el HTML
+        # 3. Guardar CSV (como respaldo)
+        df.to_csv("data_procesada.csv", index=False, encoding='utf-8-sig', sep=';')
+
+        # 4. Generar HTML con Estilo Profesional
         estilo_css = """
         <style>
-            body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; }
-            table { border-collapse: collapse; width: 100%; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-            th { background-color: #004a99; color: white; padding: 12px; text-align: left; }
-            td { padding: 10px; border-bottom: 1px solid #ddd; text-align: center; }
-            tr:hover { background-color: #f1f1f1; }
-            .positivo { color: #28a745; font-weight: bold; font-size: 1.2em; } /* Verde para ✓ */
-            .deficit { color: #dc3545; font-weight: bold; font-size: 1.2em; }   /* Rojo para X */
-            .mes-col { font-weight: bold; color: #333; text-align: left; }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 40px; background-color: #f8f9fa; }
+            h2 { color: #004a99; border-bottom: 2px solid #004a99; padding-bottom: 10px; }
+            .timestamp { color: #666; font-size: 0.9em; margin-bottom: 20px; }
+            table { border-collapse: collapse; width: 100%; background: white; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+            th { background-color: #004a99; color: white; padding: 12px; text-align: center; text-transform: uppercase; font-size: 0.85em; }
+            td { padding: 10px; border: 1px solid #dee2e6; text-align: center; }
+            tr:nth-child(even) { background-color: #f2f2f2; }
+            tr:hover { background-color: #e9ecef; }
+            .positivo { color: #28a745; font-weight: bold; font-size: 1.3em; } /* Verde para ✓ */
+            .deficit { color: #dc3545; font-weight: bold; font-size: 1.3em; }   /* Rojo para X */
+            .mes-celda { font-weight: bold; color: #333; text-align: left; }
         </style>
         """
 
-        # 4. Convertir DataFrame a HTML con clases personalizadas
+        # Convertir DataFrame a HTML
         html_table = df.to_html(classes='table', index=False, escape=False)
         
-        # Aplicar colores a los símbolos mediante reemplazo de texto
+        # Inyectar clases de color para los símbolos
         html_table = html_table.replace('<td>✓</td>', '<td><span class="positivo">✓</span></td>')
         html_table = html_table.replace('<td>X</td>', '<td><span class="deficit">X</span></td>')
 
-        # 5. Construir el archivo final
+        # Construir estructura completa del HTML
+        fecha_actual = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         html_final = f"""
         <!DOCTYPE html>
         <html lang="es">
         <head>
             <meta charset="UTF-8">
-            <title>Reporte de Cumplimiento Manpower</title>
+            <title>Reporte de Cumplimiento</title>
             {estilo_css}
         </head>
         <body>
-            <h2 style="color: #004a99;">Reporte de Gestión: Lunes a Sábado</h2>
-            <p>Última actualización: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}</p>
+            <h2>Reporte de Gestión Manpower (Lun - Sáb)</h2>
+            <p class="timestamp">Última actualización: {fecha_actual}</p>
             {html_table}
         </body>
         </html>
         """
 
-        # Guardar el archivo HTML
         with open("index.html", "w", encoding="utf-8") as f:
             f.write(html_final)
             
-        print("### Reporte HTML generado con éxito como 'index.html' ###")
+        print(f"### Proceso Finalizado: CSV e INDEX.HTML creados ###")
+        return df
 
     except Exception as e:
         print(f"Error: {e}")
 
 if __name__ == "__main__":
-    generar_reporte_html()
+    procesar_y_crear_html(URL_DATA)
