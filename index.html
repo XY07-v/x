@@ -2,118 +2,84 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visor de Datos Manpower - Excel Live</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <title>Reporte SharePoint - Manpower</title>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f9; padding: 20px; color: #333; }
-        .container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow-x: auto; }
-        h2 { color: #0046ad; border-bottom: 2px solid #0046ad; padding-bottom: 10px; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem; }
-        th { background: #0046ad; color: white; padding: 12px; text-transform: uppercase; letter-spacing: 1px; }
-        td { padding: 10px; border-bottom: 1px solid #eee; text-align: center; }
-        tr:nth-child(even) { background-color: #f9f9f9; }
-        
-        /* Reglas de visualización personalizadas */
-        .chulo { color: #27ae60; font-weight: bold; font-size: 1.2rem; }
-        .equis { color: #e74c3c; font-weight: bold; font-size: 1.2rem; }
-        .mes-texto { font-weight: bold; color: #0046ad; text-align: left; }
-        
-        #mensaje { padding: 20px; text-align: center; font-style: italic; color: #666; }
+        body { font-family: sans-serif; margin: 20px; background-color: #f4f4f9; }
+        table { border-collapse: collapse; width: 100%; background: white; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #0046ad; color: white; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        .chulo { color: green; font-weight: bold; text-align: center; }
+        .deficit { color: red; font-weight: bold; text-align: center; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Vista en Tiempo Real: SharePoint Excel</h2>
-    <div id="mensaje">Conectando con el archivo de Edwar Vanegas...</div>
-    
-    <table id="tabla-excel" style="display:none;">
-        <thead id="cabecera"></thead>
-        <tbody id="cuerpo"></tbody>
-    </table>
-</div>
+    <h2>Visualizador de Reporte SharePoint</h2>
+    <div id="status">Cargando datos...</div>
+    <div id="tabla-contenedor"></div>
 
-<script>
-    // URL directa de tu archivo de SharePoint (con el parámetro de descarga forzada)
-    const excelURL = "https://manpowergroupcolombia-my.sharepoint.com/:x:/g/personal/edwar_vanegas_manpowercolombia_com/IQCFQVQEx44GSZgIu9VIZ2dGARiJqn6nn9_psT0h1Cvxl_8?download=1";
+    <script>
+        // Tu URL de SharePoint con el parámetro de descarga directa
+        const url = "https://manpowergroupcolombia-my.sharepoint.com/:x:/g/personal/edwar_vanegas_manpowercolombia_com/IQCFQVQEx44GSZgIu9VIZ2dGASEx4gTIU0C4loxlEx3MBAg?download=1";
 
-    async function leerArchivo() {
-        try {
-            const res = await fetch(excelURL);
-            const buffer = await res.arrayBuffer();
-            const workbook = XLSX.read(new Uint8Array(buffer), { type: 'array' });
-            
-            // Tomamos la primera hoja del Excel
-            const nombreHoja = workbook.SheetNames[0];
-            const hoja = workbook.Sheets[nombreHoja];
-            
-            // Convertimos a JSON incluyendo celdas vacías (defval: "")
-            const rawData = XLSX.utils.sheet_to_json(hoja, { defval: "" });
+        async function cargarExcel() {
+            try {
+                const response = await fetch(url);
+                const data = await response.arrayBuffer();
+                const workbook = XLSX.read(data, { type: 'array' });
+                
+                // Leer la primera hoja
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                // Convertir a JSON para manipular los datos
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
-            if (rawData.length > 0) {
-                generarTabla(rawData);
-            } else {
-                document.getElementById('mensaje').innerText = "El archivo está vacío o no se pudo leer.";
+                generarTabla(jsonData);
+                document.getElementById('status').innerText = "Datos actualizados";
+            } catch (error) {
+                console.error(error);
+                document.getElementById('status').innerHTML = "<b>Error:</b> No se pudo acceder al archivo. Verifica que el enlace sea público (Cualquier persona con el enlace).";
             }
-        } catch (error) {
-            console.error(error);
-            document.getElementById('mensaje').innerHTML = "⚠️ Error al leer los datos. Asegúrate de que el enlace de SharePoint tenga permisos de lectura pública.";
         }
-    }
 
-    function generarTabla(data) {
-        const cabecera = document.getElementById('cabecera');
-        const cuerpo = document.getElementById('cuerpo');
-        const tabla = document.getElementById('tabla-excel');
-        const mensaje = document.getElementById('mensaje');
+        function generarTabla(data) {
+            let html = "<table><thead><tr>";
+            
+            // Cabeceras
+            if (data.length > 0) {
+                Object.keys(data[0]).forEach(key => {
+                    html += `<th>${key}</th>`;
+                });
+                html += "</tr></thead><tbody>";
 
-        // 1. Crear encabezados dinámicos según el archivo
-        const columnas = Object.keys(data[0]);
-        let headerHtml = "<tr>";
-        columnas.forEach(col => {
-            headerHtml += `<th>${col}</th>`;
-        });
-        headerHtml += "</tr>";
-        cabecera.innerHTML = headerHtml;
+                // Filas con tus reglas aplicadas
+                data.forEach(fila => {
+                    html += "<tr>";
+                    Object.values(fila).forEach(valor => {
+                        // REGLA: Vacíos son déficit (X)
+                        if (valor === "" || valor === null || valor === undefined) {
+                            html += `<td class="deficit">X</td>`;
+                        } 
+                        // REGLA: -1 es positivo (Chulo)
+                        else if (valor === -1 || valor === "-1") {
+                            html += `<td class="chulo">✓</td>`;
+                        } 
+                        else {
+                            html += `<td>${valor}</td>`;
+                        }
+                    });
+                    html += "</tr>";
+                });
+            }
+            
+            html += "</tbody></table>";
+            document.getElementById('tabla-contenedor').innerHTML = html;
+        }
 
-        // 2. Llenar filas con tus reglas aplicadas
-        data.forEach(fila => {
-            let rowHtml = "<tr>";
-            columnas.forEach(col => {
-                let valor = fila[col];
-                let contenido = valor;
-                let clase = "";
-
-                // APLICACIÓN DE TUS REGLAS:
-                // Si el valor es -1 -> Chulo
-                if (valor === -1 || valor === "-1") {
-                    contenido = "✔️";
-                    clase = "chulo";
-                } 
-                // Si el valor está vacío (Déficit) -> X
-                else if (valor === "" || valor === null || valor === undefined) {
-                    contenido = "❌";
-                    clase = "equis";
-                }
-                // Si la columna es MES, aplicar estilo de texto
-                else if (col.toUpperCase() === "MES") {
-                    clase = "mes-texto";
-                }
-
-                rowHtml += `<td class="${clase}">${contenido}</td>`;
-            });
-            rowHtml += "</tr>";
-            cuerpo.innerHTML += rowHtml;
-        });
-
-        mensaje.style.display = 'none';
-        tabla.style.display = 'table';
-    }
-
-    leerArchivo();
-</script>
-
+        cargarExcel();
+    </script>
 </body>
 </html>
