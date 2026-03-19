@@ -2,14 +2,14 @@ name: Actualizar Reporte Manpower
 
 on:
   schedule:
-    - cron: '0 13 * * 1-6' # 8 AM COL, Lunes a Sábado
+    - cron: '0 13 * * 1-6' # Lunes a Sábado 8 AM COL
   workflow_dispatch:      # Botón manual
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Esto es VITAL para que no salga el error 403
+      contents: write # VITAL para evitar el error 403
     steps:
       - uses: actions/checkout@v3
 
