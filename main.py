@@ -6,38 +6,30 @@ URL = "https://manpowergroupcolombia-my.sharepoint.com/:x:/g/personal/edwar_vane
 
 def generar_reporte():
     try:
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        response = requests.get(URL, headers=headers, timeout=20)
-        response.raise_for_status()
-        
-        # Leer datos: MES como texto
+        response = requests.get(URL, headers={'User-Agent': 'Mozilla/5.0'}, timeout=20)
         df = pd.read_csv(io.BytesIO(response.content), sep=';', dtype={'MES': str}, encoding='latin1')
 
-        # Reglas: Vacío = X, -1 = ✓
+        # Aplicar tus reglas: Vacío = X, -1 = ✓
         df = df.astype(str).replace(['nan', 'None', '', 'nan.1'], 'X')
         df = df.replace(['-1', '-1.0'], '✓')
 
-        # Diseño CSS para que se vea profesional
-        estilo = """<style>
-            body { font-family: sans-serif; margin: 30px; background-color: #f4f7f6; }
-            table { border-collapse: collapse; width: 100%; background: white; }
-            th { background: #004a99; color: white; padding: 10px; }
-            td { padding: 8px; border: 1px solid #ddd; text-align: center; }
-            .pos { color: #28a745; font-weight: bold; } /* Verde para ✓ */
-            .def { color: #dc3545; font-weight: bold; } /* Rojo para X */
-        </style>"""
-
-        # Convertir a HTML y poner colores
+        # Generar la tabla HTML con colores
         html_table = df.to_html(index=False, escape=False)
-        html_table = html_table.replace('<td>✓</td>', '<td><span class="pos">✓</span></td>')
-        html_table = html_table.replace('<td>X</td>', '<td><span class="def">X</span></td>')
+        html_table = html_table.replace('<td>✓</td>', '<td><span class="positivo">✓</span></td>')
+        html_table = html_table.replace('<td>X</td>', '<td><span class="deficit">X</span></td>')
 
-        # Crear el archivo index.html final
+        # EL TRUCO: Leer el index.html actual y reemplazar el texto de "Esperando..."
+        with open("index.html", "r", encoding="utf-8") as f:
+            contenido = f.read()
+
+        # Reemplazamos el marcador por la tabla real
+        marcador = '<div id="tabla-reporte">\n        <p style="text-align:center; color:#999;">Esperando actualización de datos desde SharePoint...</p>\n    </div>'
+        nuevo_contenido = contenido.replace(marcador, f'<div id="tabla-reporte">{html_table}</div>')
+
         with open("index.html", "w", encoding="utf-8") as f:
-            f.write(f"<html><head><meta charset='UTF-8'>{estilo}</head><body>")
-            f.write(f"<h2>Reporte Manpower (Lun-Sáb)</h2>{html_table}</body></html>")
-        
-        print("Reporte generado con éxito.")
+            f.write(nuevo_contenido)
+            
+        print("Datos insertados correctamente.")
     except Exception as e:
         print(f"Error: {e}")
 
