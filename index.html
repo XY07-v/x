@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte de Gestión Manpower</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            max-width: 500px;
+        }
+        .logo {
+            font-size: 50px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #002d5a;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #555;
+            line-height: 1.6;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #002d5a;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .btn-manual {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #002d5a;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">📊</div>
+        <h1>Configuración Inicial</h1>
+        <p>El archivo <strong>index.html</strong> ha sido detectado correctamente.</p>
+        <div class="loader"></div>
+        <p>Para ver los datos reales de la gestión, por favor ve a la pestaña <strong>Actions</strong> en GitHub y ejecuta el workflow manualmente.</p>
+        <small style="color: #999;">Esta página se actualizará automáticamente con la tabla de datos tras la primera ejecución exitosa.</small>
+    </div>
+</body>
+</html>
