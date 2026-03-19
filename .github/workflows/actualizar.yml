@@ -1,0 +1,25 @@
+name: Actualizar Automatizado
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 13 * * 1-6' # 8 AM COL Lunes a Sábado
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - run: pip install pandas requests openpyxl
+      - run: python index.py # Corre el script que sobreescribe el HTML
+      - run: |
+          git config --global user.name 'GitHub Action'
+          git config --global user.email 'action@github.com'
+          git add index.html
+          git commit -m "Tabla actualizada por script" || exit 0
+          git push
