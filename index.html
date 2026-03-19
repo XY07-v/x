@@ -1,85 +1,26 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Reporte SharePoint - Manpower</title>
-    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-    <style>
-        body { font-family: sans-serif; margin: 20px; background-color: #f4f4f9; }
-        table { border-collapse: collapse; width: 100%; background: white; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        th { background-color: #0046ad; color: white; }
-        tr:nth-child(even) { background-color: #f2f2f2; }
-        .chulo { color: green; font-weight: bold; text-align: center; }
-        .deficit { color: red; font-weight: bold; text-align: center; }
-    </style>
-</head>
-<body>
+name: Actualizar Reporte SharePoint
+on:
+  schedule:
+    - cron: '0 * * * *' # Corre cada hora
+  workflow_dispatch: # Permite correrlo manualmente
 
-    <h2>Visualizador de Reporte SharePoint</h2>
-    <div id="status">Cargando datos...</div>
-    <div id="tabla-contenedor"></div>
-
-    <script>
-        // Tu URL de SharePoint con el parámetro de descarga directa
-        const url = "https://manpowergroupcolombia-my.sharepoint.com/:x:/g/personal/edwar_vanegas_manpowercolombia_com/IQCFQVQEx44GSZgIu9VIZ2dGASEx4gTIU0C4loxlEx3MBAg?download=1";
-
-        async function cargarExcel() {
-            try {
-                const response = await fetch(url);
-                const data = await response.arrayBuffer();
-                const workbook = XLSX.read(data, { type: 'array' });
-                
-                // Leer la primera hoja
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                
-                // Convertir a JSON para manipular los datos
-                const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-
-                generarTabla(jsonData);
-                document.getElementById('status').innerText = "Datos actualizados";
-            } catch (error) {
-                console.error(error);
-                document.getElementById('status').innerHTML = "<b>Error:</b> No se pudo acceder al archivo. Verifica que el enlace sea público (Cualquier persona con el enlace).";
-            }
-        }
-
-        function generarTabla(data) {
-            let html = "<table><thead><tr>";
-            
-            // Cabeceras
-            if (data.length > 0) {
-                Object.keys(data[0]).forEach(key => {
-                    html += `<th>${key}</th>`;
-                });
-                html += "</tr></thead><tbody>";
-
-                // Filas con tus reglas aplicadas
-                data.forEach(fila => {
-                    html += "<tr>";
-                    Object.values(fila).forEach(valor => {
-                        // REGLA: Vacíos son déficit (X)
-                        if (valor === "" || valor === null || valor === undefined) {
-                            html += `<td class="deficit">X</td>`;
-                        } 
-                        // REGLA: -1 es positivo (Chulo)
-                        else if (valor === -1 || valor === "-1") {
-                            html += `<td class="chulo">✓</td>`;
-                        } 
-                        else {
-                            html += `<td>${valor}</td>`;
-                        }
-                    });
-                    html += "</tr>";
-                });
-            }
-            
-            html += "</tbody></table>";
-            document.getElementById('tabla-contenedor').innerHTML = html;
-        }
-
-        cargarExcel();
-    </script>
-</body>
-</html>
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Configurar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Instalar dependencias
+        run: pip install pandas openpyxl
+      - name: Ejecutar script
+        run: python procesar.py
+      - name: Subir cambios
+        run: |
+          git config user.name "GitHub Action"
+          git config user.email "action@github.com"
+          git add index.html
+          git commit -m "Actualización automática de datos" || exit 0
+          git push
