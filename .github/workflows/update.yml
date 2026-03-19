@@ -30,3 +30,10 @@ jobs:
           git add index.html
           git commit -m "Reporte actualizado automáticamente" || exit 0
           git push
+      - name: Guardar cambios
+        run: |
+          git config --global user.name 'GitHub Action'
+          git config --global user.email 'action@github.com'
+          git add .
+          git commit -m "Reporte actualizado automáticamente" || echo "Sin cambios"
+          git push
