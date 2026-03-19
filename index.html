@@ -1,26 +1,61 @@
-name: Actualizar Reporte SharePoint
-on:
-  schedule:
-    - cron: '0 * * * *' # Corre cada hora
-  workflow_dispatch: # Permite correrlo manualmente
+<script>
+    // 1. Tu URL original de SharePoint
+    const sharepointUrl = "https://manpowergroupcolombia-my.sharepoint.com/:x:/g/personal/edwar_vanegas_manpowercolombia_com/IQCFQVQEx44GSZgIu9VIZ2dGASEx4gTIU0C4loxlEx3MBAg?download=1";
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Configurar Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
-      - name: Instalar dependencias
-        run: pip install pandas openpyxl
-      - name: Ejecutar script
-        run: python procesar.py
-      - name: Subir cambios
-        run: |
-          git config user.name "GitHub Action"
-          git config user.email "action@github.com"
-          git add index.html
-          git commit -m "Actualización automática de datos" || exit 0
-          git push
+    // 2. Usamos un proxy para evitar el error de "No se pudo acceder"
+    const url = "https://api.allorigins.win/raw?url=" + encodeURIComponent(sharepointUrl);
+
+    async function cargarExcel() {
+        try {
+            document.getElementById('status').innerText = "Conectando con SharePoint...";
+            
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Error en la respuesta de red");
+            
+            const data = await response.arrayBuffer();
+            const workbook = XLSX.read(data, { type: 'array' });
+            
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+            generarTabla(jsonData);
+            document.getElementById('status').innerText = "Datos cargados correctamente";
+        } catch (error) {
+            console.error(error);
+            document.getElementById('status').innerHTML = `
+                <div style="color:red; font-weight:bold;">
+                    ⚠️ Error de acceso. <br>
+                    Causa: El firewall de tu empresa (Manpower) podría estar bloqueando el acceso externo.<br>
+                    Sugerencia: Abre el enlace en una pestaña incógnito para verificar que sea 100% público.
+                </div>`;
+        }
+    }
+
+    function generarTabla(data) {
+        let html = "<table><thead><tr>";
+        if (data.length > 0) {
+            Object.keys(data[0]).forEach(key => html += `<th>${key}</th>`);
+            html += "</tr></thead><tbody>";
+
+            data.forEach(fila => {
+                html += "<tr>";
+                Object.values(fila).forEach(valor => {
+                    // Aplicando tus reglas: -1 es ✓ y vacío es X
+                    if (valor === "" || valor === null || valor === undefined) {
+                        html += `<td class="deficit">X</td>`;
+                    } else if (valor == -1 || valor == "-1") {
+                        html += `<td class="chulo">✓</td>`;
+                    } else {
+                        html += `<td>${valor}</td>`;
+                    }
+                });
+                html += "</tr>";
+            });
+        }
+        html += "</tbody></table>";
+        document.getElementById('tabla-contenedor').innerHTML = html;
+    }
+
+    cargarExcel();
+</script>
