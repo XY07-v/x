@@ -1,61 +1,56 @@
-<script>
-    // 1. Tu URL original de SharePoint
-    const sharepointUrl = "https://manpowergroupcolombia-my.sharepoint.com/:x:/g/personal/edwar_vanegas_manpowercolombia_com/IQCFQVQEx44GSZgIu9VIZ2dGASEx4gTIU0C4loxlEx3MBAg?download=1";
+import pandas as pd
+import os
 
-    // 2. Usamos un proxy para evitar el error de "No se pudo acceder"
-    const url = "https://api.allorigins.win/raw?url=" + encodeURIComponent(sharepointUrl);
+# Tu URL de SharePoint
+url = "https://manpowergroupcolombia-my.sharepoint.com/:x:/g/personal/edwar_vanegas_manpowercolombia_com/IQCFQVQEx44GSZgIu9VIZ2dGASEx4gTIU0C4loxlEx3MBAg?download=1"
 
-    async function cargarExcel() {
-        try {
-            document.getElementById('status').innerText = "Conectando con SharePoint...";
-            
-            const response = await fetch(url);
-            if (!response.ok) throw new Error("Error en la respuesta de red");
-            
-            const data = await response.arrayBuffer();
-            const workbook = XLSX.read(data, { type: 'array' });
-            
-            const firstSheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheetName];
-            const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+def transformar(valor):
+    # Regla: Vacío es déficit (X)
+    if pd.isna(valor) or str(valor).strip() == "":
+        return '<span style="color: red; font-weight: bold;">X</span>'
+    # Regla: -1 es positivo (Chulo)
+    if str(valor) == "-1" or valor == -1:
+        return '<span style="color: green; font-weight: bold;">✓</span>'
+    return valor
 
-            generarTabla(jsonData);
-            document.getElementById('status').innerText = "Datos cargados correctamente";
-        } catch (error) {
-            console.error(error);
-            document.getElementById('status').innerHTML = `
-                <div style="color:red; font-weight:bold;">
-                    ⚠️ Error de acceso. <br>
-                    Causa: El firewall de tu empresa (Manpower) podría estar bloqueando el acceso externo.<br>
-                    Sugerencia: Abre el enlace en una pestaña incógnito para verificar que sea 100% público.
-                </div>`;
-        }
-    }
+try:
+    # Leer el archivo
+    df = pd.read_excel(url)
+    
+    # Aplicar transformación de tus reglas
+    df_final = df.applymap(transformar)
 
-    function generarTabla(data) {
-        let html = "<table><thead><tr>";
-        if (data.length > 0) {
-            Object.keys(data[0]).forEach(key => html += `<th>${key}</th>`);
-            html += "</tr></thead><tbody>";
+    # Generar el HTML
+    html_table = df_final.to_html(escape=False, index=False, classes='table table-hover')
 
-            data.forEach(fila => {
-                html += "<tr>";
-                Object.values(fila).forEach(valor => {
-                    // Aplicando tus reglas: -1 es ✓ y vacío es X
-                    if (valor === "" || valor === null || valor === undefined) {
-                        html += `<td class="deficit">X</td>`;
-                    } else if (valor == -1 || valor == "-1") {
-                        html += `<td class="chulo">✓</td>`;
-                    } else {
-                        html += `<td>${valor}</td>`;
-                    }
-                });
-                html += "</tr>";
-            });
-        }
-        html += "</tbody></table>";
-        document.getElementById('tabla-contenedor').innerHTML = html;
-    }
+    html_template = f"""
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <title>Reporte de Gestión</title>
+        <style>
+            body {{ padding: 40px; background-color: #f4f7f6; }}
+            .container {{ background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
+            th {{ background-color: #0046ad !important; color: white; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h2 class="mb-4">📊 Reporte de Gestión - SharePoint</h2>
+            <div class="table-responsive">
+                {html_table}
+            </div>
+            <p class="text-muted mt-3">Última actualización: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}</p>
+        </div>
+    </body>
+    </html>
+    """
+    
+    with open("index.html", "w", encoding="utf-8") as f:
+        f.write(html_template)
+    print("Éxito: index.html generado.")
 
-    cargarExcel();
-</script>
+except Exception as e:
+    print(f"Error crítico: {e}")
