@@ -2,20 +2,16 @@ name: Actualizar Reporte Manpower
 
 on:
   schedule:
-    - cron: '0 13 * * 1-6' # Se ejecuta 8 AM COL, de Lunes a Sábado
-  workflow_dispatch:      # Botón manual para ejecutar cuando quieras
+    - cron: '0 13 * * 1-6' # 8 AM COL
+  workflow_dispatch:      # Botón manual
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
-    # Permisos de escritura para evitar el error 403 (Permission Denied)
     permissions:
-      contents: write
-      
+      contents: write # Permiso para evitar el error 403
     steps:
-      - name: Checkout del repositorio
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
       - name: Configurar Python
         uses: actions/setup-python@v4
@@ -23,19 +19,15 @@ jobs:
           python-version: '3.9'
 
       - name: Instalar librerías
-        run: |
-          pip install pandas requests openpyxl
+        run: pip install pandas requests openpyxl
 
-      - name: Ejecutar script unificado
-        # Cambiado de main.py a index.py según tu solicitud
+      - name: Ejecutar script
         run: python index.py
 
-      - name: Guardar y subir cambios
+      - name: Guardar cambios
         run: |
           git config --global user.name 'GitHub Action'
           git config --global user.email 'action@github.com'
-          # Agrega todos los cambios (incluyendo el index.html generado)
           git add .
-          # Si no hay cambios, no falla el proceso
-          git commit -m "Reporte actualizado automáticamente" || exit 0
+          git commit -m "Actualización automática de reporte" || exit 0
           git push
