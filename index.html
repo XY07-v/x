@@ -2,69 +2,42 @@ import pandas as pd
 import requests
 import io
 
-url = "https://manpowergroupcolombia-my.sharepoint.com/:x:/g/personal/edwar_vanegas_manpowercolombia_com/IQCFQVQEx44GSZgIu9VIZ2dGAS0h1sEo0V-hJ812-oW8tys?e=o0J3Aa&download=1"
+# URL de descarga directa
+URL_DATA = "https://manpowergroupcolombia-my.sharepoint.com/:x:/g/personal/edwar_vanegas_manpowercolombia_com/IQCFQVQEx44GSZgIu9VIZ2dGAS0h1sEo0V-hJ812-oW8tys?e=o0J3Aa&download=1"
 
-def crear_dashboard_html(url_link):
+def procesar_y_guardar(url_link):
     try:
-        # 1. Descarga y Procesamiento
+        print("--- Iniciando descarga de datos ---")
         headers = {'User-Agent': 'Mozilla/5.0'}
         response = requests.get(url_link, headers=headers, timeout=20)
         response.raise_for_status()
         
-        # Leer CSV delimitado por ;
+        # 1. Lectura inicial
+        # Mantenemos 'MES' como texto según tus preferencias
         df = pd.read_csv(io.BytesIO(response.content), sep=';', dtype={'MES': str}, encoding='latin1')
 
-        # Aplicar tus reglas: Vacíos -> X, -1 -> ✓
-        df = df.fillna('X')
-        df = df.astype(str).replace(['-1', '-1.0'], '✓')
+        # 2. Aplicación de reglas lógicas
+        # El -1 es positivo (chulo) y el vacío es déficit (X)
+        df = df.astype(str) # Convertimos todo a string para manejar los símbolos
+        df = df.replace(['nan', 'None', ''], 'X') 
+        df = df.replace(['-1', '-1.0'], '✓')
 
-        # 2. Generar Estructura HTML con CSS embebido
-        # Reemplazamos los símbolos por versiones con color para la web
-        tabla_html = df.to_html(classes='table table-hover table-sm', index=False, escape=False)
-        tabla_html = tabla_html.replace('✓', '<span style="color: #28a745; font-weight: bold;">✓</span>')
-        tabla_html = tabla_html.replace('X', '<span style="color: #dc3545; font-weight: bold;">X</span>')
-
-        html_content = f"""
-        <!DOCTYPE html>
-        <html lang="es">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Dashboard Manpower</title>
-            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-            <style>
-                body {{ background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }}
-                .main-card {{ background: white; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-top: 30px; padding: 25px; }}
-                .header-title {{ color: #004581; font-weight: 700; border-left: 5px solid #004581; padding-left: 15px; }}
-                thead {{ background-color: #004581; color: white; position: sticky; top: 0; }}
-                .table-responsive {{ max-height: 700px; overflow-y: auto; }}
-            </style>
-        </head>
-        <body>
-            <div class="container-fluid px-4">
-                <div class="main-card">
-                    <h2 class="header-title mb-3">Visualización de Datos Manpower</h2>
-                    <div class="alert alert-info">
-                        <strong>Info:</strong> Conteo de Lunes a Sábado. Los <b>✓</b> representan cumplimiento y las <b>X</b> representan déficit.
-                    </div>
-                    <div class="table-responsive">
-                        {tabla_html}
-                    </div>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-
-        # 3. Guardar el archivo
-        with open("index.html", "w", encoding="utf-8") as f:
-            f.write(html_content)
+        # 3. Guardar resultado para GitHub
+        output_name = "data_procesada.csv"
+        df.to_csv(output_name, index=False, encoding='utf-8-sig', sep=';')
         
-        print("¡Éxito! El archivo 'index.html' ha sido creado.")
-        print("Ahora puedes subirlo a tu repositorio de GitHub para activarlo en GitHub Pages.")
+        print(f"### Procesamiento Exitoso ###")
+        print(f"Archivo guardado como: {output_name}")
+        print(f"Total de registros: {len(df)}")
+        
+        # Mostrar vista previa pequeña
+        print("\n--- Vista Previa (Top 5) ---")
+        print(df.head(5).to_string(index=False))
+
+        return df
 
     except Exception as e:
-        print(f"Error al generar el HTML: {e}")
+        print(f"Error crítico: {e}")
 
-# Ejecutar
-crear_dashboard_html(url)
+if __name__ == "__main__":
+    df_resultado = procesar_y_guardar(URL_DATA)
