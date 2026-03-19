@@ -1,125 +1,52 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reporte de Gestión Directo</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+if df_resultado is not None:
+    # 1. Definimos el estilo CSS para que la tabla no se vea "plana"
+    estilo_css = """
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f9; padding: 20px; }
-        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 1300px; margin: auto; }
-        .filtros { display: flex; gap: 10px; margin-bottom: 20px; }
-        input { padding: 12px; flex: 1; border-radius: 8px; border: 1px solid #ccc; }
-        button { padding: 12px 25px; background: #002d5a; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .tabla-contenedor {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px 0;
+            border-collapse: collapse;
+            width: 100%;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .tabla-contenedor th {
+            background-color: #2c3e50;
+            color: white;
+            padding: 12px;
+            text-align: center;
+            text-transform: uppercase;
+            font-size: 13px;
+        }
+        .tabla-contenedor td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            text-align: center;
+        }
+        .tabla-contenedor tr:hover {background-color: #f5f5f5;}
         
-        .tabla-con { overflow-x: auto; margin-top: 20px; }
-        table { width: 100%; border-collapse: collapse; }
-        th { background: #002d5a; color: white; padding: 12px; text-align: left; position: sticky; top: 0; }
-        td { padding: 10px; border-bottom: 1px solid #eee; font-size: 13px; }
-        
-        .v { color: green; font-weight: bold; } /* Para el -1 */
-        .x { color: red; font-weight: bold; }   /* Para el vacío */
-        .loading { text-align: center; padding: 20px; color: #666; }
+        /* Estilo específico para tus reglas */
+        .positivo { color: #27ae60; font-weight: bold; font-size: 1.2em; } /* Verde para ✓ */
+        .deficit { color: #e74c3c; font-weight: bold; font-size: 1.2em; }  /* Rojo para X */
     </style>
-</head>
-<body>
+    """
 
-<div class="card">
-    <h2>📊 Reporte de Gestión Operativa</h2>
-    <div class="filtros">
-        <input type="text" id="buscNombre" placeholder="Escribe el nombre del empleado...">
-        <button onclick="filtrar()">🔍 FILTRAR</button>
-    </div>
+    # 2. Convertimos el DataFrame a HTML
+    # Agregamos una clase para el CSS
+    html_tabla = df_resultado.to_html(classes='tabla-contenedor', index=False)
 
-    <div id="status" class="loading">Cargando datos desde SharePoint...</div>
+    # 3. Aplicamos formato condicional a los símbolos (Opcional pero recomendado)
+    html_tabla = html_tabla.replace('✓', '<span class="positivo">✓</span>')
+    html_tabla = html_tabla.replace('X', '<span class="deficit">X</span>')
 
-    <div class="tabla-con">
-        <table id="miTabla" style="display:none;">
-            <thead>
-                <tr id="cabecera"></tr>
-            </thead>
-            <tbody id="cuerpo"></tbody>
-        </table>
-    </div>
-</div>
+    # 4. Unimos el estilo con la tabla
+    html_final = estilo_css + html_tabla
 
-<script>
-    // URL de descarga directa de tu SharePoint
-    const URL_SHAREPOINT = "https://manpowergroupcolombia-my.sharepoint.com/:x:/g/personal/edwar_vanegas_manpowercolombia_com/IQCFVQXe44GSZglu9VIZ2dGAS0h1seOoV-hJ812-oW8tys?e=o0J3Aa&download=1";
-
-    async function cargarDatos() {
-        try {
-            const respuesta = await fetch(URL_SHAREPOINT);
-            const texto = await respuesta.text();
-            
-            // Usamos PapaParse para convertir el CSV a un objeto manejable
-            Papa.parse(texto, {
-                delimiter: ";",
-                header: true,
-                skipEmptyLines: true,
-                complete: function(results) {
-                    renderizarTabla(results.data);
-                }
-            });
-        } catch (error) {
-            document.getElementById('status').innerText = "Error al conectar con SharePoint. Verifica los permisos.";
-            console.error(error);
-        }
-    }
-
-    function renderizarTabla(datos) {
-        const cuerpo = document.getElementById('cuerpo');
-        const cabecera = document.getElementById('cabecera');
-        const status = document.getElementById('status');
-        const tabla = document.getElementById('miTabla');
-
-        if (datos.length === 0) return;
-
-        // Crear Cabecera
-        Object.keys(datos[0]).forEach(key => {
-            let th = document.createElement('th');
-            th.innerText = key;
-            cabecera.appendChild(th);
-        });
-
-        // Llenar Filas con tus reglas
-        datos.forEach(fila => {
-            let tr = document.createElement('tr');
-            Object.values(fila).forEach(valor => {
-                let td = document.createElement('td');
-                
-                // Aplicamos tu lógica: -1 es ✔️, vacío es ❌
-                let contenido = valor;
-                if (valor === "-1" || valor === -1) {
-                    td.innerHTML = '<span class="v">✔️</span>';
-                } else if (valor === "" || valor === null || valor === undefined) {
-                    td.innerHTML = '<span class="x">❌</span>';
-                } else {
-                    td.innerText = valor;
-                }
-                tr.appendChild(td);
-            });
-            cuerpo.appendChild(tr);
-        });
-
-        status.style.display = "none";
-        tabla.style.display = "table";
-    }
-
-    function filtrar() {
-        const input = document.getElementById("buscNombre").value.toUpperCase();
-        const filas = document.getElementById("cuerpo").getElementsByTagName("tr");
-        
-        for (let i = 0; i < filas.length; i++) {
-            // Buscamos en la columna 4 (Nombre del empleado)
-            const nombre = filas[i].cells[4] ? filas[i].cells[4].innerText.toUpperCase() : "";
-            filas[i].style.display = nombre.includes(input) ? "" : "none";
-        }
-    }
-
-    // Iniciar carga al abrir la página
-    cargarDatos();
-</script>
-
-</body>
-</html>
+    # Visualización en el Notebook
+    from IPython.display import HTML
+    display(HTML(html_final))
+    
+    # Opcional: Guardar a un archivo .html
+    # with open("reporte_asistencia.html", "w", encoding='utf-8') as f:
+    #     f.write(html_final)
