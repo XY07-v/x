@@ -1,107 +1,64 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reporte de Gestión - Manpower</title>
-    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <style>
-        body { padding: 30px; background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .card { border: none; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-radius: 12px; }
-        .table-container { overflow-x: auto; }
-        th { background-color: #0046ad !important; color: white; text-transform: uppercase; font-size: 0.85rem; }
-        .chulo { color: #198754; font-weight: bold; text-align: center; font-size: 1.2rem; }
-        .deficit { color: #dc3545; font-weight: bold; text-align: center; font-size: 1.2rem; }
-        .loading { font-style: italic; color: #666; }
-    </style>
-</head>
-<body>
+import pandas as pd
+import requests
+import io
 
-<div class="container-fluid">
-    <div class="card p-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="m-0">📊 Dashboard de Gestión</h2>
-            <div id="status" class="badge bg-primary">Conectando...</div>
-        </div>
+# URL de descarga directa
+url = "https://manpowergroupcolombia-my.sharepoint.com/:x:/g/personal/edwar_vanegas_manpowercolombia_com/IQCFQVQEx44GSZgIu9VIZ2dGAS0h1sEo0V-hJ812-oW8tys?e=o0J3Aa&download=1"
+
+def crear_dashboard_html(url_link):
+    try:
+        # 1. Descarga y Procesamiento
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(url_link, headers=headers, timeout=20)
+        response.raise_for_status()
         
-        <div class="table-container" id="tabla-resultado">
-            <p class="loading text-center">Buscando datos en SharePoint...</p>
-        </div>
+        # Leer CSV (delimitado por ;)
+        df = pd.read_csv(io.BytesIO(response.content), sep=';', dtype={'MES': str}, encoding='latin1')
+
+        # Aplicar reglas: Vacíos -> X, -1 -> ✓
+        df = df.fillna('X')
+        df = df.astype(str).replace(['-1', '-1.0'], '✓')
+
+        # 2. Generar Estructura HTML con Estilo Bootstrap
+        html_content = f"""
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Reporte de Datos - Manpower</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+            <style>
+                body {{ background-color: #f8f9fa; padding: 20px; }}
+                .table-container {{ background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
+                th {{ background-color: #004581 !important; color: white; }}
+                tr:nth-child(even) {{ background-color: #f2f2f2; }}
+                .chulo {{ color: green; font-weight: bold; }}
+                .equis {{ color: red; font-weight: bold; }}
+            </style>
+        </head>
+        <body>
+            <div class="container-fluid">
+                <div class="table-container">
+                    <h2 class="mb-4 text-center">Visualización de Datos Manpower</h2>
+                    <p class="text-muted">Nota: Se cuentan días de Lunes a Sábado. Los '-1' indican positivo (✓) y los vacíos indican déficit (X).</p>
+                    <div class="table-responsive">
+                        {df.to_html(classes='table table-hover table-bordered', index=False, escape=False).replace('✓', '<span class="chulo">✓</span>').replace('X', '<span class="equis">X</span>')}
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        # 3. Guardar el archivo
+        with open("index.html", "w", encoding="utf-8") as f:
+            f.write(html_content)
         
-        <div class="mt-3 text-muted small">
-            Nota: Los <b>-1</b> se marcan como positivos (✓) y los <b>vacíos</b> como déficit (X).
-        </div>
-    </div>
-</div>
+        print("¡Listo! Se ha generado 'index.html'. Ábrelo en tu navegador para verlo.")
 
-<script>
-    // 1. Tu URL de SharePoint + El Proxy para saltar el bloqueo de Microsoft
-    const rawUrl = "https://manpowergroupcolombia-my.sharepoint.com/:x:/g/personal/edwar_vanegas_manpowercolombia_com/IQCFQVQEx44GSZgIu9VIZ2dGASEx4gTIU0C4loxlEx3MBAg?download=1";
-    const url = "https://api.allorigins.win/raw?url=" + encodeURIComponent(rawUrl);
+    except Exception as e:
+        print(f"Error al generar el HTML: {e}")
 
-    async function obtenerDatos() {
-        const statusDiv = document.getElementById('status');
-        try {
-            const response = await fetch(url);
-            if (!response.ok) throw new Error("No se pudo conectar");
-            
-            const buffer = await response.arrayBuffer();
-            const workbook = XLSX.read(buffer, { type: 'array' });
-            const nombreHoja = workbook.SheetNames[0];
-            const datos = XLSX.utils.sheet_to_json(workbook.Sheets[nombreHoja], { defval: "" });
-
-            pintarTabla(datos);
-            statusDiv.innerText = "Actualizado";
-            statusDiv.className = "badge bg-success";
-        } catch (error) {
-            statusDiv.innerText = "Error de Acceso";
-            statusDiv.className = "badge bg-danger";
-            document.getElementById('tabla-resultado').innerHTML = `
-                <div class="alert alert-warning">
-                    <b>No se pudo leer el archivo.</b><br>
-                    Verifica que el enlace sea <u>público para cualquier persona</u> en SharePoint o intenta recargar.
-                </div>`;
-        }
-    }
-
-    function pintarTabla(data) {
-        if (data.length === 0) return;
-
-        let html = '<table class="table table-hover table-bordered align-middle"><thead><tr>';
-        
-        // Cabeceras
-        Object.keys(data[0]).forEach(col => {
-            html += `<th>${col}</th>`;
-        });
-        html += '</tr></thead><tbody>';
-
-        // Filas procesando tus reglas
-        data.forEach(fila => {
-            html += '<tr>';
-            Object.values(fila).forEach(valor => {
-                // REGLA: -1 es positivo (Chulo)
-                if (valor == -1 || valor == "-1") {
-                    html += '<td class="chulo">✓</td>';
-                }
-                // REGLA: Vacío es déficit (X)
-                else if (valor === "" || valor === null) {
-                    html += '<td class="deficit">X</td>';
-                }
-                else {
-                    html += `<td>${valor}</td>`;
-                }
-            });
-            html += '</tr>';
-        });
-
-        html += '</tbody></table>';
-        document.getElementById('tabla-resultado').innerHTML = html;
-    }
-
-    obtenerDatos();
-</script>
-
-</body>
-</html>
+# Ejecutar
+crear_dashboard_html(url)
