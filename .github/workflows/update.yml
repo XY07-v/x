@@ -2,14 +2,14 @@ name: Actualizar Reporte Manpower
 
 on:
   schedule:
-    - cron: '0 13 * * 1-6' # 8 AM COL, Lunes a Sábado
-  workflow_dispatch:      # Botón manual para pruebas
+    - cron: '0 13 * * 1-6' # Se ejecuta 8 AM COL, de Lunes a Sábado
+  workflow_dispatch:      # Botón manual para ejecutar cuando quieras
 
 jobs:
   build:
     runs-on: ubuntu-latest
     
-    # Permisos necesarios para subir el HTML generado
+    # Permisos de escritura para evitar el error 403 (Permission Denied)
     permissions:
       contents: write
       
@@ -27,14 +27,15 @@ jobs:
           pip install pandas requests openpyxl
 
       - name: Ejecutar script unificado
-        # Aquí es donde le decimos que use index.py en lugar de main.py
+        # Cambiado de main.py a index.py según tu solicitud
         run: python index.py
 
       - name: Guardar y subir cambios
         run: |
           git config --global user.name 'GitHub Action'
           git config --global user.email 'action@github.com'
-          # Esto añade el index.html que genera tu script
+          # Agrega todos los cambios (incluyendo el index.html generado)
           git add .
+          # Si no hay cambios, no falla el proceso
           git commit -m "Reporte actualizado automáticamente" || exit 0
           git push
