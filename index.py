@@ -3,29 +3,33 @@ import requests
 import io
 from datetime import datetime
 
-# Configuración de origen
+# URL de SharePoint
 URL_DATA = "https://manpowergroupcolombia-my.sharepoint.com/:x:/g/personal/edwar_vanegas_manpowercolombia_com/IQCFVQXe44GSZglu9VIZ2dGAS0h1seOoV-hJ812-oW8tys?e=o0J3Aa&download=1"
 
-def generar_todo():
+def generar_reporte():
     try:
-        # 1. Descarga de datos
+        print("Descargando datos...")
         headers = {'User-Agent': 'Mozilla/5.0'}
         r = requests.get(URL_DATA, headers=headers, timeout=30)
-        
-        # 2. Procesamiento (MES como texto)
+        r.raise_for_status()
+
+        # 1. Leer datos (MES como texto)
         df = pd.read_csv(io.BytesIO(r.content), sep=';', encoding='latin1', dtype={'MES': str})
         
-        # Filtro de fecha: Solo mostrar <= hoy
+        # 2. Filtro de fecha: Solo mostrar lo que es menor o igual a HOY
         df['Fecha_DT'] = pd.to_datetime(df['Fecha'], errors='coerce')
         hoy = datetime.now()
         df = df[df['Fecha_DT'] <= hoy].copy()
         
-        # Reglas de negocio: -1 es ✔️, vacío es ❌
+        # 3. Aplicar tus reglas: -1 es ✔️ | Vacío es ❌
         df = df.fillna('❌')
         df = df.replace(['-1', '-1.0', -1], '✔️')
+        
+        # Ordenar y limpiar columna auxiliar
+        df = df.sort_values(by='Fecha_DT', ascending=False)
         df = df.drop(columns=['Fecha_DT'])
 
-        # 3. HTML y Diseño (Todo dentro del Python)
+        # 4. Diseño HTML con Buscador
         html_content = f"""
         <!DOCTYPE html>
         <html lang="es">
@@ -34,8 +38,8 @@ def generar_todo():
             <title>Reporte de Gestión</title>
             <style>
                 body {{ font-family: sans-serif; background: #f4f7f9; padding: 20px; }}
-                .card {{ background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }}
-                .filtros {{ margin-bottom: 20px; display: flex; gap: 10px; }}
+                .card {{ background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 1200px; margin: auto; }}
+                .filtros {{ display: flex; gap: 10px; margin-bottom: 20px; background: #eee; padding: 15px; border-radius: 8px; }}
                 input {{ padding: 10px; border: 1px solid #ccc; border-radius: 5px; flex: 1; }}
                 button {{ padding: 10px 20px; background: #002d5a; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }}
                 table {{ width: 100%; border-collapse: collapse; display: none; margin-top: 15px; }}
@@ -47,12 +51,12 @@ def generar_todo():
         </head>
         <body>
             <div class="card">
-                <h2>📊 Reporte de Gestión (Lunes a Sábado)</h2>
+                <h2>📊 Reporte Operativo (Lunes a Sábado)</h2>
                 <div class="filtros">
-                    <input type="text" id="buscNombre" placeholder="Buscar por Nombre...">
+                    <input type="text" id="buscNombre" placeholder="Buscar por Nombre Completo...">
                     <button onclick="filtrar()">🔍 BUSCAR</button>
                 </div>
-                <div id="tablaContenedor">
+                <div style="overflow-x:auto;">
                     {df.to_html(index=False, table_id="miTabla", classes="display")}
                 </div>
             </div>
@@ -63,7 +67,7 @@ def generar_todo():
                     const filas = tabla.getElementsByTagName("tr");
                     tabla.style.display = "table"; 
                     for (let i = 1; i < filas.length; i++) {{
-                        const tdNom = filas[i].cells[4].innerText.toUpperCase();
+                        const tdNom = filas[i].cells[4] ? filas[i].cells[4].innerText.toUpperCase() : "";
                         filas[i].style.display = tdNom.includes(nom) ? "" : "none";
                     }}
                 }}
@@ -72,16 +76,17 @@ def generar_todo():
         </html>
         """
         
-        # Formatear iconos con color
+        # Colorear iconos
         html_content = html_content.replace('✔️', '<span class="v">✔️</span>').replace('❌', '<span class="x">❌</span>')
 
-        # GUARDAR EL RESULTADO FINAL
+        # CREACIÓN DEL ARCHIVO FISICO
         with open("index.html", "w", encoding="utf-8") as f:
             f.write(html_content)
-        print("✅ index.html generado correctamente.")
+            
+        print("✅ index.html generado con éxito.")
 
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"❌ Error en Python: {e}")
 
 if __name__ == "__main__":
-    generar_todo()
+    generar_reporte()
