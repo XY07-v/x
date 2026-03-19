@@ -9,7 +9,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Permiso para evitar el error 403
+      contents: write # IMPORTANTE: Evita el error 403
     steps:
       - uses: actions/checkout@v3
 
@@ -28,6 +28,7 @@ jobs:
         run: |
           git config --global user.name 'GitHub Action'
           git config --global user.email 'action@github.com'
-          git add .
+          # git add . en lugar de index.html para que encuentre el archivo nuevo
+          git add . 
           git commit -m "Actualización automática de reporte" || exit 0
           git push
