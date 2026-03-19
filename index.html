@@ -3,85 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CMR Y4</title>
+    <title>Reporte de Cumplimiento - Manpower</title>
     <style>
-        body, html { 
-            margin: 0; padding: 0; height: 100%; width: 100%; 
-            overflow: hidden; font-family: sans-serif; 
-            background: #050505; user-select: none; 
+        :root {
+            --primary: #0046ad; /* Color corporativo Manpower */
+            --success: #27ae60;
+            --danger: #e74c3c;
         }
-        #l-s {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #050505; display: flex; justify-content: center; align-items: center;
-            z-index: 1000;
-        }
-        .b-x { 
-            background: #111; padding: 40px; border-radius: 2px; 
-            text-align: center; border-top: 2px solid #FF00FF;
-            width: 260px;
-        }
-        h2 { color: white; font-size: 18px; margin-bottom: 25px; letter-spacing: 3px; }
-        input { 
-            display: block; width: 100%; margin: 10px 0; padding: 12px; 
-            border: 1px solid #222; background: #000; 
-            color: #FF00FF; box-sizing: border-box; outline: none; font-size: 14px;
-        }
-        button { 
-            background: #FF00FF; color: white; border: none; width: 100%;
-            padding: 12px; cursor: pointer; font-weight: bold; margin-top: 15px;
-        }
-        #a-c { display: none; flex-direction: column; height: 100vh; width: 100vw; }
-        header { background: #FF00FF; color: white; padding: 3px 10px; }
-        header h1 { margin: 0; font-size: 11px; font-weight: bold; }
-        iframe { border: none; width: 100%; height: 100%; flex-grow: 1; }
-        #e { color: #FF00FF; font-size: 10px; margin-top: 10px; height: 12px; letter-spacing: 1px; }
+        body { font-family: Arial, sans-serif; background: #f4f4f9; padding: 20px; display: flex; justify-content: center; }
+        .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 100%; max-width: 800px; }
+        h2 { color: var(--primary); text-align: center; border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { background: var(--primary); color: white; padding: 12px; text-align: left; }
+        td { padding: 10px; border-bottom: 1px solid #eee; text-align: center; }
+        .mes-badge { font-weight: bold; color: var(--primary); text-transform: uppercase; }
+        .chulo { color: var(--success); font-size: 1.2rem; font-weight: bold; }
+        .equis { color: var(--danger); font-size: 1.2rem; font-weight: bold; }
+        .nota { margin-top: 15px; font-size: 0.8rem; color: #666; font-style: italic; }
     </style>
 </head>
-<body oncontextmenu="return false;">
+<body>
 
-    <div id="l-s">
-        <div class="b-x">
-            <h2>CMR Y4</h2>
-            <input type="text" id="u" placeholder="USUARIO" autocomplete="off">
-            <input type="password" id="p" placeholder="PASSWORD" autocomplete="off">
-            <div id="e"></div>
-            <button onclick="v()">LOGIN</button>
-        </div>
-    </div>
+<div class="container">
+    <h2>Panel de Control de Asistencia</h2>
+    
+    <table id="tablaReporte">
+        <thead>
+            <tr>
+                <th>MES</th>
+                <th>FECHA</th>
+                <th>INDICADOR</th>
+            </tr>
+        </thead>
+        <tbody id="contenido">
+            </tbody>
+    </table>
 
-    <div id="a-c">
-        <header><h1>CMR Y4</h1></header>
-        <iframe id="f" src="https://www.appsheet.com/start/968d9884-9e36-4534-be97-0e5fd3a0288f"></iframe>
-    </div>
+    <p class="nota">* Se contabilizan días de Lunes a Sábado. Domingos y festivos excluidos.</p>
+</div>
 
-    <script>
-        // Usuario: Y42025 | Pass: Apiai2025*
-        const _0x1 = "WTQyMDI1"; 
-        const _0x2 = "QXBpYWkyMDI1Kg==";
+<script>
+    /**
+     * INSTRUCCIÓN: 
+     * Pega aquí los datos de tu Excel. 
+     * Si el valor es -1 se pondrá ✔️, si está vacío se pondrá ❌.
+     */
+    const rawData = [
+        { mes: "MARZO", fecha: "2026-03-09", valor: -1 },
+        { mes: "MARZO", fecha: "2026-03-10", valor: "" },
+        { mes: "MARZO", fecha: "2026-03-11", valor: -1 },
+        { mes: "MARZO", fecha: "2026-03-12", valor: -1 },
+        { mes: "MARZO", fecha: "2026-03-13", valor: "" },
+        { mes: "MARZO", fecha: "2026-03-14", valor: -1 }
+    ];
 
-        function v() {
-            const i1 = document.getElementById("u").value;
-            const i2 = document.getElementById("p").value;
-            
-            if (btoa(i1) === _0x1 && btoa(i2) === _0x2) {
-                document.getElementById("l-s").style.display = "none";
-                document.getElementById("a-c").style.display = "flex";
-                // Forzar recarga del iframe para asegurar que cargue tras el login
-                document.getElementById("f").src = document.getElementById("f").src;
-            } else {
-                document.getElementById("e").innerText = "DATOS INCORRECTOS";
-                setTimeout(() => { document.getElementById("e").innerText = ""; }, 2000);
-            }
-        }
+    const tbody = document.getElementById('contenido');
 
-        // Bloqueos de seguridad
-        document.addEventListener('contextmenu', e => e.preventDefault(), true);
-        window.addEventListener('keydown', e => {
-            if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 67 || e.keyCode == 74)) || (e.ctrlKey && e.keyCode == 85)) {
-                e.preventDefault();
-            }
-        }, true);
-        document.addEventListener('keypress', e => { if (e.key === 'Enter') v(); });
-    </script>
+    rawData.forEach(item => {
+        const fila = document.createElement('tr');
+        
+        // Lógica: -1 es positivo (chulo), vacío es déficit (x)
+        const esPositivo = item.valor === -1;
+        const icono = esPositivo ? "✔️" : "❌";
+        const clase = esPositivo ? "chulo" : "equis";
+
+        fila.innerHTML = `
+            <td class="mes-badge">${item.mes}</td>
+            <td>${item.fecha}</td>
+            <td class="${clase}">${icono}</td>
+        `;
+        
+        tbody.appendChild(fila);
+    });
+</script>
+
 </body>
 </html>
