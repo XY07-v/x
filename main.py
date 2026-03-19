@@ -1,139 +1,183 @@
 import pandas as pd
 import requests
 import io
+import json
 
 URL = "https://manpowergroupcolombia-my.sharepoint.com/:x:/g/personal/edwar_vanegas_manpowercolombia_com/IQCFQVQEx44GSZgIu9VIZ2dGAS0h1sEo0V-hJ812-oW8tys?e=o0J3Aa&download=1"
 
-def generar_reporte_nestle():
+def generar_reporte_ultrarrapido():
     try:
+        print("--- Descargando y Optimizando Datos ---")
         headers = {'User-Agent': 'Mozilla/5.0'}
         response = requests.get(URL, headers=headers, timeout=30)
-        # Leer con latin1 para evitar errores de eñes o tildes
         df = pd.read_csv(io.BytesIO(response.content), sep=';', dtype=str, encoding='latin1')
         
-        # 1. Limpieza de nombres de columnas
-        df.columns = df.columns.str.replace('ï»¿', '') # Limpiar caracteres raros
-        
-        # 2. Aplicar tus reglas de negocio (Chulos y Equis)
-        # Asumiendo que las columnas de cumplimiento se llaman 'L. Inicial', 'L. Final' o similares
+        # 1. Limpieza de nombres y reglas de negocio
+        df.columns = df.columns.str.replace('ï»¿', '')
         for col in df.columns:
-            df[col] = df[col].replace(['nan', 'None', '', 'nan.1'], '<span style="color: #dc3545; font-weight: bold;">X</span>')
-            df[col] = df[col].replace(['-1', '-1.0'], '<span style="color: #28a745; font-weight: bold;">✓</span>')
+            df[col] = df[col].replace(['nan', 'None', '', 'nan.1'], 'X')
+            df[col] = df[col].replace(['-1', '-1.0'], '✓')
 
-        html_table = df.to_html(classes='display nowrap', index=False, escape=False, table_id="tablaReporte")
+        # 2. Extraer valores únicos para los filtros ANTES de enviar al HTML
+        def get_unicos(col_name):
+            if col_name in df.columns:
+                return sorted(df[col_name].unique().tolist())
+            return []
 
-        # 3. HTML con Filtros Select e Inteligencia
+        filtros_data = {
+            "fechas": get_unicos("Fecha"),
+            "nombres": get_unicos("Nombre Completo"),
+            "regionales": get_unicos("REGIONAL") if "REGIONAL" in df.columns else get_unicos(df.columns[0]),
+            "notas": get_unicos("Nota") if "Nota" in df.columns else []
+        }
+
+        # 3. Convertir toda la data a un formato JSON ligero para el navegador
+        data_json = df.to_json(orient='records')
+
+        # 4. HTML con Carga Diferida (Solo renderiza al filtrar)
         html_final = f"""
         <!DOCTYPE html>
         <html lang="es">
         <head>
             <meta charset="UTF-8">
-            <title>Nestlé Professional - Reporte de Logueo</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Nestlé Professional - Consulta Rápida</title>
             <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
             <style>
-                body {{ font-family: 'Segoe UI', Arial; margin: 0; background-color: #f4f4f4; }}
-                .header-nestle {{ background: #1a2c4e; color: white; padding: 20px; text-align: center; border-bottom: 4px solid #cc0000; }}
-                .container {{ width: 98%; margin: 15px auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+                body {{ font-family: 'Segoe UI', Arial; margin: 0; background-color: #f0f2f5; color: #333; }}
+                .header {{ background: #1a2c4e; color: white; padding: 15px; text-align: center; border-bottom: 4px solid #cc0000; }}
+                .container {{ width: 98%; margin: 10px auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }}
                 
-                /* Estilo Filtros */
-                .filtros-box {{ display: flex; gap: 15px; flex-wrap: wrap; background: #eee; padding: 15px; border-radius: 8px; margin-bottom: 20px; align-items: flex-end; }}
-                .filtro-group {{ display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 180px; }}
-                .filtro-group label {{ font-weight: bold; font-size: 12px; color: #333; }}
-                select {{ padding: 8px; border-radius: 4px; border: 1px solid #ccc; background: white; }}
+                .filtros-box {{ display: flex; gap: 15px; flex-wrap: wrap; background: #ffffff; padding: 20px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px; align-items: flex-end; }}
+                .filtro-item {{ display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 200px; }}
+                .filtro-item label {{ font-weight: bold; font-size: 13px; color: #1a2c4e; }}
                 
-                .btn-aplicar {{ background: #cc0000; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; height: 38px; }}
-                .btn-aplicar:hover {{ background: #a00000; }}
-
-                /* Tabla */
-                table.dataTable thead th {{ background-color: #1a2c4e !important; color: white !important; font-size: 13px; }}
-                .dataTables_wrapper {{ overflow-x: hidden !important; }}
+                select {{ padding: 10px; border-radius: 5px; border: 1px solid #bbb; background: #fff; cursor: pointer; }}
+                
+                .btn-consultar {{ background: #cc0000; color: white; border: none; padding: 12px 30px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.3s; }}
+                .btn-consultar:hover {{ background: #444; transform: translateY(-2px); }}
+                
+                #tablaContenedor {{ display: none; margin-top: 20px; border-top: 2px solid #eee; padding-top: 20px; }}
+                
+                .positivo {{ color: #28a745; font-weight: bold; font-size: 1.2em; }}
+                .deficit {{ color: #dc3545; font-weight: bold; font-size: 1.2em; }}
+                
+                table.dataTable thead th {{ background-color: #1a2c4e !important; color: white !important; padding: 12px; }}
             </style>
         </head>
         <body>
-            <div class="header-nestle">
-                <h1>NESTLÉ PROFESSIONAL</h1>
-                <p>Reporte de Control de Logueos y Deslogueos (Lun-Sáb)</p>
+            <div class="header">
+                <h2 style="margin:0;">NESTLÉ PROFESSIONAL</h2>
+                <p style="margin:5px 0 0 0; font-size:14px; opacity:0.9;">Módulo de Consulta: Logueos de Personal</p>
             </div>
 
             <div class="container">
                 <div class="filtros-box">
-                    <div class="filtro-group">
-                        <label>FECHA</label>
-                        <select id="selFecha"><option value="">Todas</option></select>
+                    <div class="filtro-item">
+                        <label>📅 FECHA</label>
+                        <select id="selFecha"><option value="">-- Seleccionar Fecha --</option></select>
                     </div>
-                    <div class="filtro-group">
-                        <label>NOMBRE COMPLETO</label>
-                        <select id="selNombre"><option value="">Todos</option></select>
+                    <div class="filtro-item">
+                        <label>👤 NOMBRE COMPLETO</label>
+                        <select id="selNombre"><option value="">-- Seleccionar Nombre --</option></select>
                     </div>
-                    <div class="filtro-group">
-                        <label>REGIONAL</label>
-                        <select id="selRegional"><option value="">Todas</option></select>
+                    <div class="filtro-item">
+                        <label>📍 REGIONAL / NOTA</label>
+                        <select id="selRegional"><option value="">-- Seleccionar --</option></select>
                     </div>
-                    <div class="filtro-group">
-                        <label>NOTA</label>
-                        <select id="selNota"><option value="">Todas</option></select>
-                    </div>
-                    <button class="btn-aplicar" onclick="aplicarFiltros()">APLICAR FILTROS</button>
+                    <button class="btn-consultar" onclick="ejecutarConsulta()">🚀 CONSULTAR REPORTE</button>
                 </div>
 
-                {html_table}
+                <div id="tablaContenedor">
+                    <table id="tablaReporte" class="display nowrap" style="width:100%">
+                        <thead><tr id="headerRow"></tr></thead>
+                        <tbody id="bodyData"></tbody>
+                    </table>
+                </div>
             </div>
 
             <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
             <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-            
-            <script>
-                $(document).ready(function() {{
-                    var table = $('#tablaReporte').DataTable({{
-                        "pageLength": 50,
-                        "responsive": true,
-                        "dom": 'rtip',
-                        "language": {{ "url": "//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json" }}
-                    }});
 
-                    // Función para llenar los SELECT con valores ÚNICOS
-                    function llenarSelect(colIndex, selectId) {{
-                        table.column(colIndex).data().unique().sort().each(function(d, j) {{
-                            // Limpiar HTML si existe en el dato
-                            var texto = d.replace(/<[^>]*>?/gm, '');
-                            if(texto.trim() != "") {{
-                                $(selectId).append('<option value="'+texto+'">'+texto+'</option>');
-                            }}
-                        }});
+            <script>
+                const fullData = {data_json};
+                const filtros = {json.dumps(filtros_data)};
+                let dataTableInstance = null;
+
+                $(document).ready(function() {{
+                    // Llenar selectores con únicos
+                    filtros.fechas.forEach(f => $('#selFecha').append(`<option value="${{f}}">${{f}}</option>`));
+                    filtros.nombres.forEach(n => $('#selNombre').append(`<option value="${{n}}">${{n}}</option>`));
+                    filtros.regionales.forEach(r => $('#selRegional').append(`<option value="${{r}}">${{r}}</option>`));
+                }});
+
+                function ejecutarConsulta() {{
+                    const fechaVal = $('#selFecha').val();
+                    const nombreVal = $('#selNombre').val();
+                    const regionalVal = $('#selRegional').val();
+
+                    if(!fechaVal && !nombreVal && !regionalVal) {{
+                        alert("Por favor selecciona al menos un filtro para optimizar la carga.");
+                        return;
                     }}
 
-                    // Llenar los desplegables (Ajustar índices de columna si es necesario)
-                    llenarSelect(0, '#selFecha');    // Columna 0
-                    llenarSelect(1, '#selNombre');   // Columna 1
-                    llenarSelect(3, '#selRegional'); // Columna 3 (Ajustar según tu Excel)
-                    
-                    // Buscar columna NOTA dinámicamente
-                    var idxNota = -1;
-                    $('#tablaReporte thead th').each(function(i) {{
-                        if($(this).text().toUpperCase().includes('NOTA')) idxNota = i;
+                    // Filtrar la data en memoria (SUPER RÁPIDO)
+                    let filtered = fullData.filter(row => {{
+                        return (!fechaVal || row['Fecha'] === fechaVal) &&
+                               (!nombreVal || row['Nombre Completo'] === nombreVal) &&
+                               (!regionalVal || Object.values(row).includes(regionalVal));
                     }});
-                    if(idxNota != -1) llenarSelect(idxNota, '#selNota');
 
-                    // Función del Botón
-                    window.aplicarFiltros = function() {{
-                        table.column(0).search($('#selFecha').val());
-                        table.column(1).search($('#selNombre').val());
-                        table.column(3).search($('#selRegional').val());
-                        if(idxNota != -1) table.column(idxNota).search($('#selNota').val());
-                        table.draw();
-                    }};
-                }});
+                    renderizarTabla(filtered);
+                }}
+
+                function renderizarTabla(data) {{
+                    $('#tablaContenedor').show();
+                    if (dataTableInstance) {{
+                        dataTableInstance.destroy();
+                        $('#headerRow').empty();
+                        $('#bodyData').empty();
+                    }}
+
+                    if (data.length === 0) {{
+                        alert("No se encontraron datos.");
+                        return;
+                    }}
+
+                    // Crear cabeceras
+                    const columns = Object.keys(data[0]);
+                    columns.forEach(col => $('#headerRow').append(`<th>${{col}}</th>`));
+
+                    // Crear filas con estilos de Chulo/Equis
+                    data.forEach(row => {{
+                        let tr = '<tr>';
+                        columns.forEach(col => {{
+                            let val = row[col];
+                            if(val === '✓') val = '<span class="positivo">✓</span>';
+                            if(val === 'X') val = '<span class="deficit">X</span>';
+                            tr += `<td>${{val}}</td>`;
+                        }});
+                        tr += '</tr>';
+                        $('#bodyData').append(tr);
+                    }});
+
+                    dataTableInstance = $('#tablaReporte').DataTable({{
+                        "pageLength": 25,
+                        "responsive": true,
+                        "scrollX": false,
+                        "language": {{ "url": "//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json" }}
+                    }});
+                }}
             </script>
         </body>
         </html>
         """
-        
         with open("index.html", "w", encoding="utf-8") as f:
             f.write(html_final)
-        print("Reporte Nestlé generado con filtros desplegables.")
+        print("✅ Reporte Optimizado Nestlé generado.")
 
     except Exception as e:
-        print(f"Error: {{e}}")
+        print(f"Error: {e}")
 
 if __name__ == "__main__":
-    generar_reporte_nestle()
+    generar_reporte_ultrarrapido()
