@@ -1,0 +1,32 @@
+name: Actualizar Reporte Manpower
+
+on:
+  schedule:
+    - cron: '0 13 * * 1-6' # Se ejecuta 8 AM COL, de Lunes a Sábado
+  workflow_dispatch:      # Botón para ejecutarlo cuando tú quieras
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Configurar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Instalar librerías
+        run: |
+          pip install pandas requests
+
+      - name: Ejecutar script de procesamiento
+        run: python main.py
+
+      - name: Guardar cambios en el HTML
+        run: |
+          git config --global user.name 'GitHub Action'
+          git config --global user.email 'action@github.com'
+          git add index.html
+          git commit -m "Reporte actualizado automáticamente" || exit 0
+          git push
